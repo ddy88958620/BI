@@ -1,0 +1,81 @@
+var conn="BI";//获得BI数据库连接
+var filePath = "C:\\Users\\wx\\Desktop\\EXCEL抽样\\EXCEL抽样";  //获得文件上传的目录
+var fileDir = file.dir(filePath);  //获得目录下所有文件
+var result='0';// 先给附件检查结果赋值
+var EXPECT_DATE = env.getValue("EXPECT_DATE");//获取期待日期
+var TSK_INSTANC = env.getValue("processGuid");//取计划任务GUID
+var TSK_TASKNAME = env.getValue("processName");//取控制流名称（自定义）
+var TSK_ENDTIME = env.getValue("starttime");//取文件上传时间
+var TSK_USERNAME = env.getValue("userName");//取上传用户名（上传者名BI系统抛出）
+var TSK_FILENAME = env.getValue("fileName");//上传的文件名（上传的文件名BI系统抛出）
+//下面是寻找符合条件的文件名
+	for(i=0;i<fileDir.length;i++) 
+		{ 
+			logger.debug("现在读到的文件是："+fileDir[i]);
+				if(fileDir[i]== EXPECT_DATE+"优惠积分兑现分析.xls"||fileDir[i]==EXPECT_DATE+"优惠积分兑现分析.XLS")
+				{	result='1';//给检查结果赋值
+				var filename = fileDir[i];
+				logger.debug("文件名符合！");
+				}		
+		}
+logger.debug("找到符合的文件名！");
+	if(result =='0')//直接写入BI库 没找到符合规范的文件
+		    {var TSK_DETAIL = '文件名不合规范！';
+		     var TSK_SUCCESS = '0';
+             var sql="insert into  SYS_DC_ETLTASKLOG values ('"+TSK_INSTANC+"','"+TSK_TASKNAME+"','"+TSK_ENDTIME+"','"+TSK_USERNAME+"','"+TSK_FILENAME+"','"+TSK_SUCCESS+"','"+TSK_DETAIL+"')";
+             logger.debug(sql);
+ 	  	  	 db.execSQL(conn,sql);
+			}
+    else if (result =='1')//下面是进一步判断文件页签！
+			{logger.debug("接下来是页签的判断！");
+			 var stream = new java.io.FileInputStream(filePath+"\\"+filename);	// 文件名写全路径，文件不存在会抛异常
+			 var importor = new com.jiuqi.office.excel.SimpleImportor(stream);
+			 var sheetSize = importor.sheetSize();	// 获取页签数量'
+			 var EXCELfile = filePath+"\\"+filename;
+			 logger.debug(EXCELfile);
+			 for (var i = 0; i < sheetSize; i++) // 遍历每个页签，查找符合条件的页签
+				{
+				var sheetName = importor.getSheetName(i);
+				if(sheetName=="8月收入列帐")
+				{	result='2';//检查页签结果赋值
+				var sheetname1 = importor.getSheetName(i)
+				logger.debug(result);
+				logger.debug("找到了符合标准的页签："+sheetName);
+				  }
+				}
+					if(result =='1')//直接写入BI库 没找到符合规范的页签
+						{var TSK_DETAIL = '文件页签名不合规范！';
+						 var TSK_SUCCESS = '0';
+						 var sql="insert into  SYS_DC_ETLTASKLOG values ('"+TSK_INSTANC+"','"+TSK_TASKNAME+"','"+TSK_ENDTIME+"','"+TSK_USERNAME+"','"+TSK_FILENAME+"','"+TSK_SUCCESS+"','"+TSK_DETAIL+"')";
+						 logger.debug(sql);
+						 db.execSQL(conn,sql);		  
+						}
+					else if (result =='2' )//下面是进一步的数据检查
+					    {logger.debug("接下来是文件内容的判断！");
+					    var open = file.openExcel(EXCELfile,sheetname1);
+						var rownum= 1;
+                        for (r = 5; r < open.getRowCount(); r++) {
+	                    var	target = open.getCellData(7, r);
+	                    rownum = r;
+	                    if (target == null || target == "")			          
+	       		        break;
+					   }						 
+						 logger.debug(rownum);
+						if (rownum != '67')
+							{var TSK_DETAIL = '文件不符合模板规范！';
+							 var TSK_SUCCESS = '0';
+							 var sql="insert into  SYS_DC_ETLTASKLOG values ('"+TSK_INSTANC+"','"+TSK_TASKNAME+"','"+TSK_ENDTIME+"','"+TSK_USERNAME+"','"+TSK_FILENAME+"','"+TSK_SUCCESS+"','"+TSK_DETAIL+"')";
+							 logger.debug(sql);
+							 db.execSQL(conn,sql);
+							}
+						else {var TSK_DETAIL = '文件符合规范，成功上传！';
+							 var TSK_SUCCESS = '1';
+							 var sql="insert into  SYS_DC_ETLTASKLOG values ('"+TSK_INSTANC+"','"+TSK_TASKNAME+"','"+TSK_ENDTIME+"','"+TSK_USERNAME+"','"+TSK_FILENAME+"','"+TSK_SUCCESS+"','"+TSK_DETAIL+"')";
+							 logger.debug(sql);
+							 db.execSQL(conn,sql);
+							}
+						}
+				
+			}
+					
+ 

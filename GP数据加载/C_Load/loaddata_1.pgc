@@ -1,0 +1,237 @@
+/*****************************************************************************
+  数据装载程序loaddata
+  参数1 数据库@主机名
+  参数2 用户名
+  参数3 schema名字 
+
+  
+  程序运行准备：
+  1.synmanage.program_setup配置了全量数据目录、备份目录、日志文件目录、Debug级别、全量数据GPFDIST地址
+  2.全量数据目录下面需要建立以本次程序需要导入数据的Schema名称命名的目录
+  3.备份目录需要建立fulldata目录
+  4.nohup提交gpfdist程序
+  
+  全量数据GPFDIST地址example:
+  	gpfdist://smdw-1:8099,gpfdist://smdw-2:8099
+	
+	其他说明：
+  	1.所有外部表建在syndata这个schema下，程序会检查，如果没有该schema，程序会新建
+  	2.gpfdist程序的数据目录需要与synmanage.program_setup中的全量数据目录一致
+  
+  执行：/u01/gpprogram/loaddata gxtest3@gpmaster1 synuser trff_app
+*****************************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <errno.h>
+#include <signal.h>
+#include <unistd.h>
+#include <errno.h>
+#include <dirent.h>
+#include <sys/stat.h>
+
+#define  SQLERRCHK  0
+#define  QUIRYERR  1
+#define  UPDATEERR  2
+#define  DELETEERR  2
+#define  SQLDEBUG   3
+#define  DEBDEBUG  4
+
+/* 公共变量的使用：CmdStr[0]--CmdStr[49]  用于拆分gpfdist串；CmdStr[50] 用于拆分文件名中的库表名    */
+
+EXEC SQL INCLUDE <comm.h>;
+
+
+EXEC SQL BEGIN DECLARE SECTION;
+  char DataDir[100],BackDir[100],SchemaName[50],gpf[500],splitch[100],filetype[50],encod[50];
+  char loadschma[50];
+EXEC SQL END DECLARE SECTION;
+
+FILE *fp,*flist,*logfp;
+int gpfcount;
+
+
+main(int argc,char ** argv )
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    const char *target = argv[1];
+    const char *user = argv[2];
+    char fname[100],flistname[100],logdir[100],logfile[100],listline[50],timestr[30], debug_level[10];
+  EXEC SQL END DECLARE SECTION;
+
+  EXEC SQL CONNECT TO :target USER :user;
+  	
+  GetStrTime(0,timestr);  
+  if( env_prepare( DataDir, logdir, BackDir, gpf, debug_level ) ) return(-1);
+
+  
+  strcpy( SchemaName,argv[3] );
+  sprintf( fname,"%s/load_result_%s_%s.out",logdir,SchemaName,timestr );   /* 记录每张表导入结果 */
+  if ((fp =fopen(fname,"w")) == NULL )  {
+    printf("Open result file ERROR %s\n",fname);
+    exit( -1 );
+  }
+    
+  strcpy( loadschma,"syndata" );                                       /* 所有外部表都建在loadschema这个schema下 */
+  if ( create_loadschema() ) return(-1);
+  	
+  sprintf( logfile,"%s/loaddata_%s_%s.log",logdir,SchemaName,timestr );   /* 日志文件 */
+  if ((logfp =fopen(logfile,"w")) == NULL )  {
+    printf("Open log file ERROR %s\n",logfile);
+    exit( -1 );
+  } 
+  ECPGdebug( atoi(debug_level), logfp );
+  fprintf( logfp,"Start Time=%s=\n",timestr );
+  fprintf( logfp,"DataDir=%s=,Backdir=%s=,LogDir=%s=\n",DataDir,BackDir,logdir );
+  
+  /* strcpy(splitch, ","); */
+  strcpy(filetype, "CSV");
+  strcpy(encod, "GB18030");
+  fprintf(logfp,"gpfdist=%s=,splitch=%s=,filetype=%s=,encod=%s=\n",gpf,splitch,filetype,encod);
+  gpfcount = SplitBuf2( gpf,',','C',0 );
+    
+  
+  if( Main_Process() ) {
+  	fclose( logfp );
+    fclose( fp );
+  	return(-1);
+  }
+  
+  GetCurrentTime(0,timestr);
+  fprintf(logfp,"End Time=%s=\n",timestr);
+      
+  EXEC SQL DISCONNECT;
+  fclose( logfp );
+  fclose( fp );
+  
+  return(0);
+}
+
+Main_Process()
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    int i,ifilecnt;
+    char sfullname[160],sbakname[160],stablename[100],sFullDir[200];
+  EXEC SQL END DECLARE SECTION;
+  char resname[500],desname[500],sMVfile[1000];
+  
+  sprintf( sFullDir,"%s/%s",DataDir,SchemaName );
+  ifilecnt = ReadSortDir( sFullDir, 9000, 0, "NAME" );
+  
+  for ( i=0;i<ifilecnt;i++ ) {
+    sprintf( resname,"%s/%s", sFullDir, DirBuf[i].fname );
+    sprintf( desname,"%s/fulldata/%s", BackDir, DirBuf[i].fname );
+    SplitBuf2( DirBuf[i].fname,'.','C',50 );
+    if ( load_data2( SchemaName,CmdStr[50],"," )  ) return(-1);    /* 第三个参数需要输入单引号，如：“‘|’” */
+    sprintf( sMVfile,"mv -f %s %s",resname,desname ); 
+    if( system( sMVfile ) ){
+    	fprintf( logfp, "backup file=%s= to =%s= Error!\n",resname, desname );
+    	return( -1 );
+    }
+  }
+     
+  return(0);
+} 
+
+create_loadschema( )
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    char sqlbuff[500],tmpname[50];
+  EXEC SQL END DECLARE SECTION;
+  
+  EXEC SQL select nspname into :tmpname from pg_namespace where nspname = :loadschma;
+  if ( sqlca.sqlcode<0 ) return(-1);
+  if ( sqlca.sqlcode==100 ) {
+    sprintf( sqlbuff,"CREATE SCHEMA %s",loadschma );
+    EXEC SQL EXECUTE IMMEDIATE :sqlbuff;
+    if ( sqlca.sqlcode<0 ) return(-1);
+  }
+  
+  return(0);
+}
+
+env_prepare( char *sdatadir, char *slogdir, char *sbackdir, char *sgpfstr, char *sdebug_level )
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    char sqlbuff[500],tmpdatadir[100],tmplog[100],tmpbakdir[100],tmpgpf[200],tmpdebug[10];
+  EXEC SQL END DECLARE SECTION;
+  
+  EXEC SQL select alldata_dir,backup_dir,logfile_dir,gpfdist_alldata,debug_level into :tmpdatadir,:tmpbakdir,:tmplog,:tmpgpf, :tmpdebug from synmanage.program_setup where setup_id = 1;
+  if ( sqlca.sqlcode ==100 || sqlca.sqlcode<0 ){
+  	 fprintf(logfp,"synmanage.program_setup表没有配置参数，或参数配置错误，请到前台【运行参数管理】配置参数\n");
+  	 return(-1);
+  }else{
+    DeleteSpace( tmpdatadir ); strcpy( sdatadir,tmpdatadir ); 
+    DeleteSpace( tmpbakdir );  strcpy( sbackdir,tmpbakdir ); 
+    DeleteSpace( tmplog );  strcpy( slogdir, tmplog );     
+    DeleteSpace( tmpgpf );  strcpy( sgpfstr, tmpgpf );     
+    DeleteSpace( tmpdebug );   strcpy( sdebug_level, tmpdebug ); 
+    
+  }
+  
+  return(0);
+}
+
+load_data2( char *schemaname,char *tbname,char *sp )
+{
+  EXEC SQL BEGIN DECLARE SECTION;
+    char sqlbuff[5000],tmpbuff[1000],tabname[50],schname[50],splitch[10];
+    int rowcnt,errcnt,i;
+  EXEC SQL END DECLARE SECTION;
+  time_t  btime,etime;
+  
+  strcpy( schname, schemaname );
+  strcpy( tabname, tbname );
+  strcpy( splitch, sp );
+  DeleteSpace( schname );
+  DeleteSpace( tabname );
+  
+  /*EXEC SQL BEGIN WORK;*/
+  
+  sprintf( sqlbuff,"drop external table if exists %s.%s_%s_ext",loadschma,schname,tabname );
+  EXEC SQL EXECUTE IMMEDIATE :sqlbuff;
+
+  sprintf( sqlbuff,"drop table if exists %s.%s_%s_error",loadschma,schname,tabname );
+  EXEC SQL EXECUTE IMMEDIATE :sqlbuff;
+
+/*  sprintf( sqlbuff,"create temp table %s_temp as select * from %s.%s limit 1 ",tabname,schname,tabname ); */
+/*  EXEC SQL EXECUTE IMMEDIATE :sqlbuff; */
+  
+  sprintf( sqlbuff,"create external table %s.%s_%s_ext (like %s.%s) location ( ",loadschma,schname,tabname,schname,tabname );
+  for ( i=0;i<gpfcount;i++ ) {
+    sprintf( tmpbuff,"\'%s/%s/%s.csv\'",CmdStr[i],schname,tabname );
+    if( i<(gpfcount-1) ) strcat( tmpbuff,", " );
+    strcat( sqlbuff,tmpbuff );
+  }
+  strcat( sqlbuff,") " );
+  sprintf( tmpbuff,"format '%s' (delimiter '%s' null '' quote E'\x15' ) encoding '%s' LOG ERRORS INTO %s.%s_%s_error SEGMENT REJECT LIMIT 100 PERCENT",
+                    filetype,splitch,encod,loadschma,schname,tabname );
+  strcat( sqlbuff,tmpbuff );
+  EXEC SQL EXECUTE IMMEDIATE :sqlbuff;
+  	
+  sprintf( sqlbuff,"truncate %s.%s",schname,tabname );
+  EXEC SQL EXECUTE IMMEDIATE :sqlbuff;
+
+  time( &btime );
+  sprintf( sqlbuff,"insert into %s.%s select * from %s.%s_%s_ext",schname,tabname,loadschma,schname,tabname );
+  EXEC SQL EXECUTE IMMEDIATE :sqlbuff;
+  time( &etime );
+  
+  rowcnt = sqlca.sqlerrd[2];
+  
+  sprintf( sqlbuff,"select count(*) from %s.%s_%s_error",loadschma,schname,tabname );
+  EXEC SQL PREPARE tot_error FROM :sqlbuff;
+  EXEC SQL EXECUTE tot_error INTO :errcnt;
+   
+  fprintf( logfp, "Table=%s=,ProcessTime=%lds=,insert=%d=,error=%d=!\n",tabname,etime-btime,rowcnt,errcnt);
+  fflush( logfp );
+  
+  fprintf( fp, "Table=%s=,ProcessTime=%lds=,insert=%d=,error=%d=!\n",tabname,etime-btime,rowcnt,errcnt);
+  fflush( fp );
+  
+  /*EXEC SQL COMMIT;*/
+  
+  return(0);
+}

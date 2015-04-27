@@ -1,0 +1,379 @@
+
+【在虚拟机上实验数据导入导出】
+#20130104 黄春宝编写
+
+#gpadmin用户是greenplum的超级用户
+gp启动：
+切换到gpadmin用户下，执行
+gpstart
+gp关闭：
+在gpadmin用户下，执行
+gpstart
+【注意】
+1、每次关闭虚拟机之前一定要先执行gpstop关闭gp。
+2、虚拟机内有三个用户: bonc、gpadmin、root 他们的密码都是gpadmin
+
+
+===============================================================
+一、创建日常操作用户、库、schema、外部表：
+步骤1、创建用户
+[gpadmin@wmd etl_data]$ 
+[gpadmin@wmd etl_data]$ psql -d template1   <<--使用gpadmin用户登陆
+psql (8.2.15)
+Type "help" for help.
+
+template1=# create role user1 with password 'user1' login createdb;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+template1=# \q
+[gpadmin@wmd etl_data]$ 
+
+---可能需要配置pg_hba.conf
+步骤2、创建库
+[gpadmin@wmd etl_data]$ psql -d template1 -U user1 -h wmd  <<--使用gp库用户登陆
+Password for user user1: 
+psql (8.2.15)
+Type "help" for help.
+
+template1=> 
+template1=> create database bi_ods_all;
+CREATE DATABASE
+template1=> 
+template1=> \q
+
+---可能需要配置pg_hba.conf
+步骤3、创建schema
+[gpadmin@wmd etl_data]$ psql -d bi_ods_all -U user1 -h 192.168.170.180 <<--机器别名不行就用IP
+Password for user user1: 
+psql (8.2.15)
+Type "help" for help.
+
+bi_ods_all=> create schema stage;
+CREATE SCHEMA
+bi_ods_all=> create schema ods;
+CREATE SCHEMA
+bi_ods_all=> \q
+
+步骤4、授权用户使用外部表
+[gpadmin@mdw gpseg-1]$ psql -d bi_ods_all -U gpadmin -h 192.168.170.180  <<--使用gpadmin用户来授权给用户使用外部表
+psql (8.2.15)
+Type "help" for help.
+
+bi_ods_all=# alter role user1 with createexttable (type='readable',protocol='gpfdist');
+ALTER ROLE
+bi_ods_all=# alter role user1 with createexttable (type='writable',protocol='gpfdist');
+ALTER ROLE
+bi_ods_all=# \q
+
+
+步骤5、试验外部表（只读外部表）：
+【实验前的一些配置】
+使用root用户在/data目录下建立一个目录etl_data然后目录属主为bonc用户。
+cd /data
+mkdir etl_data
+chown -R bonc:bonc /data/etl_data
+然后将greenplum的工具路径添加到 bonc用户的.bashrc文件中
+即添加下面这行东西：
+source /data/greenplum-db/greenplum_path.sh
+然后执行: source /home/bonc/.bashrc  <<--这个东西在以后正常登陆LINUX就不用再次执行了，因为每个用户每次登陆都会自动加载这个文件到自己的环境里
+好了，继续做下面的实验
+
+使用os用户bonc用户启动gpfdist 服务
+nohup gpfdist -d /data/etl_data -p 8082 -l /home/bonc/gpfdist.log&
+
+
+使用gp库用户user1在bi_ods_all库下创建只读外部表
+drop external table if exists stage.ts_mytest_r_external;
+create external table stage.ts_mytest_r_external
+(
+	caa varchar(20),
+	cbb varchar(20),
+	ccc varchar(20),
+	cdd varchar(2)
+)
+LOCATION ('gpfdist://192.168.170.180:8082/xmx.txt')
+FORMAT 'TEXT'( DELIMITER '|')
+encoding 'UTF8'
+;
+
+步骤6、使用os用户bonc用户建一个与外部表相对应的文本文件xmx.txt（路径：/data/etl_data）
+输入以下内容
+aaaa|bbbbbbb|cccccccc|1
+2a2a|2b2b2b2b|2c2c2c|2
+3a3a|3b3b3b3b|3c3c3c|3
+4a4a|4b4b4b4b|4c4c4c|4
+
+7、使用gp用户user1登陆bi_ods_all库，查询外部表
+[gpadmin@mdw gpseg-1]$ psql -d bi_ods_all -U user1 -h 192.168.170.180
+psql (8.2.15)
+Type "help" for help.
+
+bi_ods_all=# select * from stage.ts_mytest_r_external limit 10;
+
+
+
+
+===============================================================
+二、实验构建STAGE层
+步骤1：用gp库用户user1创建stage表(采用简单的随机分布来建表)
+drop table if exists stage.ts_mytest;
+create table stage.ts_mytest
+(
+	caa varchar(20),
+	cbb varchar(20),
+	ccc varchar(20),
+	cdd varchar(2)
+)
+DISTRIBUTED RANDOMLY
+;
+
+步骤2：用gp库用户user1创建stage函数，将数据从外部表读取上来
+create or replace function stage.p_ts_mytest()
+  returns void as
+$body$
+declare
+    v_schemaname  varchar(40) := 'stage';  --这个东西没有使用到，纯粹无聊
+begin
+
+		--清空表
+		EXECUTE 'TRUNCATE TABLE stage.ts_mytest;';
+		--进数据
+		insert into stage.ts_mytest(caa,cbb,ccc,cdd) select caa,cbb,ccc,cdd from stage.ts_mytest_r_external;
+		
+end; $body$
+language plpgsql volatile;
+
+将以上function代码保存到/home/bonc/_hcb目录下
+然后用bonc用户（只要是有权限创建function的用户就可以）执行：
+psql -f /home/bonc/_hcb/crt_fun.sql
+（也可以在GPADMIN3上或Aginity Workbench for EMC Greenplum上创建）
+然后：
+psql -c "select stage.p_ts_mytest()"
+（也可以在GPADMIN3上或Aginity Workbench for EMC Greenplum上输入select stage.p_ts_mytest();来执行）
+这样就是实现了把外部表指向的xmx.txt文件中的数据读取到了stage.ts_mytest表里面来了。
+
+
+===============================================================
+三、实验构建ODS层
+步骤1：使用数据库用户user1来创建ods表
+drop table ods.ods_d_mytest;
+create table ods.ods_d_mytest
+(
+	month_id varchar(6),
+	day_id varchar(2),
+	caa varchar(20),
+	cbb varchar(20),
+	ccc varchar(20),
+	cdd numeric
+)
+WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz)
+DISTRIBUTED BY (caa)
+PARTITION BY LIST (month_id)
+	SUBPARTITION BY LIST (day_id)
+	SUBPARTITION TEMPLATE
+	(
+		SUBPARTITION d18 VALUES ('18'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d19 VALUES ('19'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d20 VALUES ('20'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d21 VALUES ('21'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d22 VALUES ('22'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d23 VALUES ('23'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d24 VALUES ('24'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d25 VALUES ('25'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d26 VALUES ('26'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d27 VALUES ('27'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d28 VALUES ('28'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d29 VALUES ('29'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d30 VALUES ('30'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz),
+		SUBPARTITION d31 VALUES ('31'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz)
+	)
+(
+	PARTITION m201203 VALUES ('201203'::character varying) WITH (appendonly=true, compresslevel=1, orientation=column, compresstype=quicklz)
+);
+
+COMMENT ON TABLE  ods.ods_d_mytest IS '学习测试表';
+COMMENT ON COLUMN ods.ods_d_mytest.month_id IS '月份';
+COMMENT ON COLUMN ods.ods_d_mytest.day_id IS '日期';
+COMMENT ON COLUMN ods.ods_d_mytest.caa IS 'a字段';
+COMMENT ON COLUMN ods.ods_d_mytest.cbb IS 'b字段';
+COMMENT ON COLUMN ods.ods_d_mytest.ccc IS 'c字段';
+
+步骤2：使用数据库用户user1来创建ods函数,将stage层数据读上来,同时做些加工
+create or replace function ods.p_ods_d_mytest(in v_day_id character varying,out v_retcode character varying,out v_retinfo character varying)
+returns record as
+$body$
+declare
+    v_month             varchar(6);
+    v_day               varchar(2);
+begin
+     v_month             := substring(v_day_id,1,6);
+     v_day               := substring(v_day_id,7,2);
+     --清空表分区
+     execute 'alter table ods.ods_d_mytest alter partition m'|| v_month ||' truncate partition d' ||v_day ; 
+     --将数据从stage层读上来,同时做些处理
+     insert into ods.ods_d_mytest(
+     month_id,
+     day_id,
+     caa,
+     cbb,
+     ccc,
+     cdd
+     )    
+     select     
+     v_month,
+     v_day,
+     caa||'--',
+     case when cbb='bbbbbbb' then '1bbbbbb' else cbb end as cbb,
+     ccc,
+     cdd::numeric
+     from stage.ts_mytest 
+     ;
+end; 
+$body$
+language plpgsql volatile;
+
+使用数据库用户user1来在psql环境里面执行：
+select ods.p_ods_d_mytest('20120318');
+这样就实现了把数据从stage 层读到ods层并做一些加工的目的.
+
+
+
+===============================================================
+四、导出数据为文本
+（一）实验用命令copy实现导出：
+使用bonc用户创建shell脚本: my_copy_out.sh
+#####shell脚本--start#######
+#!/bin/bash
+source /data/greenplum-db/greenplum_path.sh
+export PGHOST="192.168.170.180"
+export PGPORT="5432"
+export PGDATABASE="bi_ods_all"
+export PGUSER="user1"
+export PGPASSWORD="user1"
+psql -t -c "\copy (select * from ods.ods_d_mytest) to /home/bonc/_hcb/my_data.txt"
+echo "导出完成."
+#####shell脚本-- end #######
+
+给shell脚本赋予执行权限: chmod +x my_copy_out.sh
+执行shell脚本: ./my_copy_out.sh
+
+好了可以在目录 /home/bonc/_hcb下看到生成了文本的数据文件my_data.txt （字段默认是以TAB为分隔符）
+查看数据文件: cat my_data.txt
+
+--把数据导入到库里: COPY ods.ods_d_mytest FROM '/home/bonc/_hcb/my_data.txt'
+
+（二）实验用可写外部表实现导出：
+步骤1：使用数据库用户user1来建立可写外部表
+drop external table ods.ods_d_mytest_w_external;
+create writable external table ods.ods_d_mytest_w_external
+(
+	month_id varchar(6),
+	day_id varchar(2),
+	caa varchar(20),
+	cbb varchar(20),
+	ccc varchar(20),
+	cdd varchar(20)
+)
+LOCATION ('gpfdist://wmd:8082/TDBODDWAL02001')
+FORMAT 'TEXT' (delimiter '|' null '' escape 'off')
+ENCODING 'UTF8'
+DISTRIBUTED RANDOMLY;
+
+步骤2：使用数据库用户user1来向外部表INSERT数据，实现文本文件的生成
+执行SQL:
+insert into ods.ods_d_mytest_w_external(month_id,day_id,caa,cbb,ccc,cdd) 
+select month_id,day_id,caa,cbb,ccc,cdd from ods.ods_d_mytest 
+where month_id='201203' and day_id='18';
+
+查看gpfdist所指向的目录下生成文件：TDBODDWAL02001 （路径：/data/etl_data）
+查看文件前10行内容：
+cat TDBODDWAL02001|head -10
+查看文件总行数：
+wc -l TDBODDWAL02001
+
+
+
+===============================================================
+五、SHELL代码做文件加工
+创建shell脚本: my_dofile.sh
+#!/bin/bash
+#参数1: v_file_name,文件名
+#参数2: v_table_name,出数的表名
+#本代码执行举例: ./my_dofile.sh TDBODDWAL02001 ods.ods_d_mytest
+
+#检查参数个数
+if [ "$#" -ne "2" ]; then
+        echo "Please check parameter: $0 <v_file_name> <v_table_name>"
+        exit -1 
+fi 
+
+#获得参数
+v_file_name=$1
+v_table_name=$2
+
+#进入文件所在目录
+cd /data/etl_data
+
+#检查文件是否存在
+ls $v_file_name >& /dev/null
+v_if_file_exists=`echo $?`
+
+if [ $v_if_file_exists -eq 0 ]
+then 
+	echo "文件存在,程序可以继续..."
+else
+	echo "文件找不到,还加工个啥呀,程序退出"
+	exit -1
+fi
+
+#取得文件总行数
+outfile_row_cnt=`wc -l $v_file_name|awk '{print $1}'
+
+#以每split_size行为单位分隔文件,并命名为新的名字格式
+split_size=2
+v_file_new_name=${v_file_name}"A201301"  #加上A201301
+
+split -l $split_size $v_file_name $v_file_new_name
+
+
+##为分割后产生的所有数据文件生成MD5校验文件,格式：MD5串
+##为分割后产生的所有数据文件生成CHK文件,格式：文件名,文件行数
+for v_f in `ls ${v_file_new_name}*` #查找到文件
+do
+        echo `md5sum $v_f |awk '{print $1}'` > $v_f.MD5
+        v_f_cnt=`wc -l $v_f|awk '{print $1}'`
+        echo $v_f","$v_f_cnt > $v_f.CHK
+done
+
+#取得当前时间
+v_time_id=`date +%Y%m%d%H%M%S`
+
+#设置连接GP库环境变量
+source /data/greenplum-db/greenplum_path.sh
+export PGHOST="192.168.170.180"
+export PGPORT="5432"
+export PGDATABASE="bi_ods_all"
+export PGUSER="user1"
+export PGPASSWORD="user1"
+
+psql -c "insert into ods.t_comm_fileout_status(file_name,outfile_row_cnt,status_id,time_id,chk_desc,table_name) 
+values('$v_file_name',$outfile_row_cnt,'100','$v_time_id','文件处理完毕','$v_table_name');"
+
+echo "文件加工完成"
+
+
+#-------------------------------------------------
+#附上日志表
+DROP TABLE IF EXISTS ods.t_comm_fileout_status;
+CREATE TABLE ods.t_comm_fileout_status
+(
+	file_name CHARACTER VARYING(100),
+	outfile_row_cnt NUMERIC,
+	status_id CHARACTER VARYING(5),
+	time_id CHARACTER VARYING(18),
+	chk_desc CHARACTER VARYING(200),
+	table_name CHARACTER VARYING(200)
+)TABLESPACE pg_default 
+DISTRIBUTED BY (file_name);
+
+

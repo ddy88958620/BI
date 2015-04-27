@@ -1,0 +1,1 @@
+perl %AUTO_HOME%\bin\scriptwz.pl -ds %AUTO_DSN% -logon etl,etl -sys %1 -db %2 -table %3 -logdb %4 -job bteq -home %AUTO_HOME% -otype perl -dformat unformatted 

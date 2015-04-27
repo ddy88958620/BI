@@ -1,0 +1,191 @@
+############################创建gp表空间-1-gpfilespace,没有创建表空间的话,建表时不要加tablespace关键字
+#1.创建表空间配置文件,tbs_config.txt
+#filespace:sdspace
+#mdw:1:/data/gp_tbs/sdspace/gp-1
+#mdw:2:/data/gp_tbs/sdspace/gp0
+#mdw:3:/data/gp_tbs/sdspace/gp1
+#filespace:bdspace
+#mdw:1:/data/gp_tbs/bdspace/gp-1
+#mdw:2:/data/gp_tbs/bdspace/gp0
+#mdw:3:/data/gp_tbs/bdspace/gp1
+
+#-----------------------------------------------------
+[gpadmin@mdw gp_tbs]$ gpfilespace
+20130422:17:11:41:017999 gpfilespace:mdw:gpadmin-[INFO]:-
+A tablespace requires a file system location to store its database
+files. A filespace is a collection of file system locations for all components
+in a Greenplum system (primary segment, mirror segment and master instances).
+Once a filespace is created, it can be used by one or more tablespaces.
+
+
+20130422:17:11:41:017999 gpfilespace:mdw:gpadmin-[INFO]:-getting config
+Enter a name for this filespace
+> sdspace
+
+Checking your configuration:
+Your system has 1 hosts with 2 primary and 0 mirror segments per host.
+
+Configuring hosts: [mdw]
+
+Please specify 2 locations for the primary segments, one per line:
+primary location 1> /data/gp_tbs/sdspace/gp0
+primary location 2> /data/gp_tbs/sdspace/gp1
+
+Enter a file system location for the master
+master location> /data/gp_tbs/sdspace/gp-1
+20130422:17:12:27:017999 gpfilespace:mdw:gpadmin-[INFO]:-Creating configurationfile...
+20130422:17:12:27:017999 gpfilespace:mdw:gpadmin-[INFO]:-[created]
+20130422:17:12:27:017999 gpfilespace:mdw:gpadmin-[INFO]:-
+To add this filespace to the database please run the command:
+   gpfilespace --config /data/gp_tbs/gpfilespace_config_20130422_171142
+
+[gpadmin@mdw gp_tbs]$ gpfilespace --config ./gpfilespace_config_20130422_171142
+20130422:17:14:35:018304 gpfilespace:mdw:gpadmin-[INFO]:-
+A tablespace requires a file system location to store its database
+files. A filespace is a collection of file system locations for all components
+in a Greenplum system (primary segment, mirror segment and master instances).
+Once a filespace is created, it can be used by one or more tablespaces.
+
+
+20130422:17:14:35:018304 gpfilespace:mdw:gpadmin-[INFO]:-getting config
+Reading Configuration file: './gpfilespace_config_20130422_171142'
+20130422:17:14:35:018304 gpfilespace:mdw:gpadmin-[INFO]:-Performing validation on paths
+..............................................................................
+
+20130422:17:14:35:018304 gpfilespace:mdw:gpadmin-[INFO]:-Connecting to database
+20130422:17:14:38:018304 gpfilespace:mdw:gpadmin-[INFO]:-Filespace "sdspace" successfully created
+#-----------------------------------------------------
+
+#........sdspace,bdspace
+###########################创建gp表空间-2-create tablespace
+create tablespace sdspace filespace sdspace;
+create tablespace bdspace filespace bdspace;
+
+###########################创建角色
+create role mntrole;
+create role qryrole;
+
+###########################创建用户
+create role etluser login password 'etluser';
+create role dqcuser login password 'dqcuser';
+create role mdsuser login password 'mdsuser';
+create role rptuser login password 'rtpuser';
+create role arcuser login password 'acruser';
+
+###########################对部分角色和用户授权
+#授权外部表创建
+alter role etluser with createexttable (type='readable',protocol='gpfdist');
+alter role acruser with createexttable (type='readable',protocol='gpfdist');
+alter role mntrole with createexttable (type='readable',protocol='gpfdist');
+
+alter role etluser with createexttable (type='writable',protocol='gpfdist');
+alter role arcuser with createexttable (type='writable',protocol='gpfdist');
+alter role mntrole with createexttable (type='writable',protocol='gpfdist');
+#授权对数据库使用
+grant all on database testdb to etluser,arcuser,mntrole with grant option;
+#授权对表空间使用
+grant all on tablespace sdspace,bdspace to etluser,arcuser,mntrole with grant option;
+###########################创建schema:sdsddl,sdsdata,bdsdata,odsdata,sumdata,adsdata,tmpdata
+#login as etluser: psql testdb -U etluser -h 192.168.56.121
+create schema sdsddl authorization etluser;
+create schema sdsdata authorization etluser;
+create schema bdsdata authorization etluser;
+create schema odsdata authorization etluser;
+create schema sumdata authorization etluser;
+create schema adsdata authorization etluser;
+create schema tmpdata authorization etluser;
+#schema权限授权给其它用户或角色使用
+grant usage on schema sdsddl,sdsdata,bdsdata,odsdata,sumdata,adsdata,tmpdata to arcuser,mntrole with grant option;
+
+###########################GP数据操作范例
+###################192.168.56.121
+su - oracle
+cd ociuldr
+export LANG=en_US.UTF-8
+export NLS_LANG=american_america.al32utf8
+#0x07#/home/oracle/ociuldr/ociuldr.bin user=sjck/sjck03@21.1.1.45/wsbank field=0x07 file=/home/oracle/ociuldr/data/wsbank.MENU.txt query="select * from wsbank.MENU order by menuid"
+/home/oracle/ociuldr/ociuldr.bin user=sjck/sjck03@21.1.1.45/wsbank field="|" file=/home/oracle/ociuldr/data/MENU.txt query="select * from wsbank.MENU order by menuid"
+
+
+#建表脚本-greenplum,user-schema:etluser-sdsddl
+psql testdb -U etluser -h 192.168.56.121
+
+drop table if exists sdsddl.menu;
+
+create table sdsddl.MENU
+(
+  MENUID   integer not null,
+  MENUNAME VARCHAR(255),
+  URL      VARCHAR(255),
+  PARENTID integer,
+  OWNERID  integer
+) tablespace sdspace
+distributed by (menuid);
+
+#建表脚本-greenplum,user-schema:etluser-sdsddata
+drop table if exists sdsdata.menu;
+
+create table sdsdata.menu( like sdsddl.menu) tablespace sdspace;
+
+#创建gpfdist,su - gpadmin
+#/home/oracle/ociuldr/data
+chmod -R a+rwx /home/oracle/
+chmod -R a+rwx /home/oracle/ociuldr/
+chmod -R a+rwx /home/oracle/ociuldr/data
+
+#创建gpfdist数据源
+export LANG=en_US.UTF-8
+nohup gpfdist -d /home/oracle/ociuldr/data -p 8082 -l /home/gpadmin/gpfdist.log&
+
+#建外部表脚本-greenplum,user-schema:etluser-sdsddl
+drop external table if exists sdsddl.menu_ext;
+
+create external table sdsddl.menu_ext
+(
+  MENUID   integer,
+  MENUNAME VARCHAR(255),
+  URL      VARCHAR(255),
+  PARENTID integer,
+  OWNERID  integer
+)
+LOCATION ('gpfdist://192.168.56.121:8082/MENU.txt')
+FORMAT 'TEXT'
+(
+DELIMITER as '|'
+null as ''
+)
+encoding 'UTF8'
+log errors into sdsddl.err_menu_ext segment reject limit 100000
+;
+
+#like其它表结构来建外部表,使用不可见字符0x07,通过终端的拷贝粘贴建表脚本会报错
+#需要将下面建表脚本保存为文件:gp_extab.sql,然后执行
+#psql testdb -U etluser -h 192.168.56.121 -f ~gpadmin/gp_exttab.sql
+drop external table if exists sdsddl.menu_ext1;
+
+create external table sdsddl.menu_ext1
+(
+  like sdsddl.menu  
+)
+LOCATION ('gpfdist://192.168.56.121:8082/wsbank.MENU.txt')
+FORMAT 'TEXT'
+(
+DELIMITER as ''
+null as ''
+)
+encoding 'UTF8'
+log errors into sdsddl.err_menu_ext segment reject limit 100000
+;
+
+##将外部表数据加载到GP普通表
+drop table if exists sdsdata.menu;
+
+create table sdsdata.menu( like sdsddl.menu) tablespace sdspace;
+
+insert into sdsdata.menu select * from sdsddl.menu_ext1;
+#commit; --可以不执行
+
+########文本文件加载到GP完成
+
+--select 'alter table petl.'||t.tablename||' owner to etluser;'
+--from pg_catalog.pg_tables  t where t.schemaname='petl';

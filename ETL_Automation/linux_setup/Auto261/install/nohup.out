@@ -1,0 +1,2 @@
+DBI::db=HASH(0xa27570)->disconnect invalidates 1 active statement handle (either destroy statement handles or call finish on them before disconnecting) at /home/etl261/bin/etl_unix.pm line 2078.
+DBI::db=HASH(0x6408d0)->disconnect invalidates 1 active statement handle (either destroy statement handles or call finish on them before disconnecting) at /home/etl261/bin/etl_unix.pm line 2078.

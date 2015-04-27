@@ -1,0 +1,22 @@
+##win
+ociuldr.exe user=oe/oe@192.168.56.121:1521/orcl query="select customer_id, cust_first_name, cust_last_name, nls_language, nls_territory, credit_limit, cust_email, account_mgr_id, date_of_birth, marital_status, gender, income_level from oe.customers" field="0x0f" file="d:\oe.customer.txt"
+ociuldr user=oe/oe@192.168.56.121:1521/orcl query="select * from tab" field=0x0f
+
+##linux
+./ociuldr.bin user=oe/oe@orcl query="select * from tab" field=0x0f file=./data/tab.txt
+
+
+##xx
+ociuldr.exe user=oe/oe@192.168.56.121:1521/orcl query="select customer_id, cust_first_name, cust_last_name, nls_language, nls_territory, credit_limit, cust_email, account_mgr_id, date_of_birth, marital_status, gender, income_level from oe.customers" field="0x0f" file="/home/oracle/ociuldr/data/oe.customer.txt"
+
+
+/home/oracle/ociuldr/ociuldr.bin user=oe/oe@192.168.56.121:1521/orcl field=0x0f file=/home/oracle/ociuldr/data/OC_PRODUCT_INFORMATION.txt query=\"select p.product_id, p.product_name, p.product_description, p.category_id, p.weight_class, p.warranty_period, p.supplier_id, p.product_status, p.list_price, p.min_price, p.catalog_url,i.product_id,i.quantity_on_hand from OC_PRODUCT_INFORMATION p,oc_inventories i WHERE p.product_id=i.product_id(+)\"
+
+###################192.168.56.121
+su - oracle
+cd ociuldr
+export LANG=C
+export NLS_LANG=american_america.al32utf8
+/home/oracle/ociuldr/ociuldr.bin user=sjck/sjck03@21.1.1.45/wsbank field=0x07 file=/home/oracle/ociuldr/data/wsbank.MENU.txt query="select * from wsbank.MENU order by menuid"
+
+

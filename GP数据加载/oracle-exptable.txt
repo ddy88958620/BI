@@ -1,0 +1,57 @@
+-
+Oracle数据直接导出到文本文件的方法 利用Oracle中的Spool缓冲池技术可以实现Oracle数据导出到文本文件。
+1)、在Oracle PL/SQL中输入缓冲开始命令，并指定输出的文件名：
+spool d:output.txt
+2)、在命令行中随便输入你的SQL查询：
+select mobile from customer;
+select mobile from client;
+……
+3)、在命令行中输入缓冲结果命令：
+spool off;
+则系统将缓冲池中的结果都输出到"output.txt"文件中。
+以TAB键分隔  例子(syoyou_xamshain.sql文件) set newpage 0
+set linesize 10000             
+set pagesize 0
+set und off
+set trimspool on
+set colsep,
+set echo off
+set feedback off spool syoyou_xamshain.csv
+select 
+SHIMEI_CD , VALID_TERM_START_YMD , SHAIN_NMJ_SEI ,SHAIN_NMJ_NA , SHAIN_NMHK_SEI , 
+SHAIN_NMHK_NA , SHAIN_NMHE_SEI , SHAIN_NMHE_MIDDLE , SHAIN_NMHE_NA , SEI_BETSU_KBN , 
+NOK00J0001.NOZJ1301(birth_day), 
+SAIYOU_YMD , KEI_BETSU_CD , RETIRE_YMD , BANK_CD , BANK_NMJ , BANK_NMK , BANK_SHITEN_CD , 
+BANK_SHITEN_NMJ , BANK_SHITEN_NMK , YOKIN_TYPE , KOUZA_MEIGI_KANA ,
+NOK00J0001.NOZJ1301(kouza_no),  SSO_TAISHO_FLG , 
+VALID_TERM_END_YMD , NEXT_SYSTEM_TAISHO_FLG , IDOU_FLG , YUUKOU_FLG , CREATE_USER_CD , 
+CREATE_TIME_STAMP , UPDATE_USER_CD , UPDATE_TIME_STAMP
+from xamshain ; spool off
+
+资料引用:http://www.knowsky.com/384828.html
+
+
+
+要从Oracle导出部分数据到文本文件中(flatfile),由于数据表很大，使用toad时导出失败，居然说内存溢出。看来还是用Oracle自己的命令来完成吧。 
+首先需要准备导出的目录，假设为 /opt/tmp，该目录需要Oracle的帐户可以读写。
+create or replace directory utlexportpath as '/opt/tmp';
+
+然后在sqlplus中即可使用如下方式把文件导出：
+
+
+declare
+    outfile utl_file.file_type;
+begin
+    outfile := utl_file.fopen('UTLEXPORTPATH','exp.txt','W');
+    for rec in (select col1,col2 from sometable where your conditions)
+    loop
+       utl_file.put_line(outfile, rec.col1||','||rec.col2);
+    end loop;
+    utl_file.fclose(f);
+end;
+/
+
+即便是导出上G的数据，也会非常的快。
+试试吧。 
+
+本篇文章来源于 Linux公社网站(www.linuxidc.com)  原文链接：http://www.linuxidc.com/Linux/2012-01/50849.htm

@@ -1,0 +1,241 @@
+grant select on all tables in schema adsdata to frtuser;
+grant select on all tables in schema adsview to frtuser;
+grant select on all tables in schema arcdata to frtuser;
+grant select on all tables in schema bdsdata to frtuser;
+grant select on all tables in schema bdsview to frtuser;
+grant select on all tables in schema btemp to frtuser;
+grant select on all tables in schema dmrdata to frtuser;
+grant select on all tables in schema dmrddl to frtuser;
+grant select on all tables in schema dmsdata to frtuser;
+grant select on all tables in schema dqcrep to frtuser;
+grant select on all tables in schema etlrep to frtuser;
+grant select on all tables in schema gp_toolkit to frtuser;
+grant select on all tables in schema information_schema to frtuser;
+grant select on all tables in schema mdsrep to frtuser;
+grant select on all tables in schema odsdata to frtuser;
+grant select on all tables in schema odsview to frtuser;
+grant select on all tables in schema pg_aoseg to frtuser;
+grant select on all tables in schema pg_bitmapindex to frtuser;
+grant select on all tables in schema pg_catalog to frtuser;
+grant select on all tables in schema pg_toast to frtuser;
+grant select on all tables in schema public to frtuser;
+grant select on all tables in schema rptrep to frtuser;
+grant select on all tables in schema sdsdata to frtuser;
+grant select on all tables in schema sdsddl to frtuser;
+grant select on all tables in schema tmpdata to frtuser;
+grant select on all tables in schema uadsddl to frtuser;
+grant select on all tables in schema ubdsddl to frtuser;
+grant select on all tables in schema uesdsddl to frtuser;
+grant select on all tables in schema ufxqdata to frtuser;
+grant select on all tables in schema usdsddl to frtuser;
+grant select on all tables in schema wrkdata to frtuser;
+
+
+grant usage on schema tmpdata,wrkdata,public;
+grant create on schema  tmpdata,wrkdata,public;
+psql whrcb_edw -c "\dn" | grep -e '^ [a-z]' | awk '{print "psql whrcb_edw -c \"\\dt "$1"\.*\"|sed '"'1,3d'"'|sed '"'\$d'"'|sed '"'\$d'"'"}'
+
+psql whrcb_edw -c "\dn" | grep -e '^ [a-z]' | awk '{print "psql whrcb_edw -c \"\\dt "$1"\.*\"|sed '"'1,3d'"'"}'
+psql whrcb_edw -c "\dn" | grep -e '^ [a-z]' | awk '{print "psql whrcb_edw -c \"\\dt "$1"\.*\"|sed '"'1,3d'"'|sed '"'\$d'"'"}'
+psql whrcb_edw -c "\dn" | grep -e '^ [a-z]' | awk '{print "psql whrcb_edw -c \"\\dt "$1"\.*\"|sed '"'1,3d'"'|sed '"'\$d'"'|sed '"'\$d'"'"}'
+
+psql whrcb_edw -c "\dn" | grep -e '^ [a-z]' | awk '{print "psql whrcb_edw -c \"\\dt "$1"\.*\"|sed '"'1,3d'"'|sed '"'\$d'"'|sed '"'\$d'"'"}'
+
+--#################
+
+sdsdata.s01_glssubdyntmp1231
+sdsdata.s01_glssubdyntmp11231
+sdsdata.s01_glssubdyn1231
+
+--xx--sdsdata.s01_glssubdyntmp11231
+--xx--sdsdata.s01_glssubdyntmp21231
+--xx--sdsdata.S01_GLSSUBDYN1231
+sdsdata.S01_PUBFXRATE1231
+sdsdata.S01_PUBBRANCHINFO1231
+sdsdata.S01_DPSFOREBRC1231
+sdsdata.S01_MBFEBRCINFO1231
+
+bdsdata.T00_EXCH_RATE
+bdsdata.T04_INTER_ORG_HIS
+
+bdsdata.T09_GL_ITEM_DYNAM_HIS_1230
+
+adsdata.C05_FIRST_ITEM_DAY_SUM_1230
+adsdata.C05_LAST_ITEM_DAY_SUM_1230
+adsdata.C05_CCYCOM_ITEM_DAY_SUM_1230
+adsdata.C08_INTER_ORG_1230
+adsdata.C08_INTER_ORG_RELA_1230
+
+--#####################
+
+whrcb_edw=# \dt bdsdata.T00_EXCH_RATE*
+                      List of relations
+ Schema  |         Name          | Type  |  Owner  | Storage 
+---------+-----------------------+-------+---------+---------
+ bdsdata | t00_exch_rate         | table | etluser | heap
+ bdsdata | t00_exch_rate_bak0117 | table | etluser | heap
+ 
+whrcb_edw=> select count(*) from adsdata.C08_INTER_ORG;
+ count 
+-------
+     0
+(1 row)
+
+Time: 131.024 ms
+whrcb_edw=> select count(*) from adsdata.C08_INTER_ORG_RELA;
+ count 
+-------
+     0
+(1 row)
+
+Time: 2.765 ms
+--################
+ssh gpadmin@31.2.2.107
+cd /data/backup/SCBAK/transfer
+# 69 # /data/backup/SCBAK/transfer
+mkdir fjy20140118
+psql whrcb_edw
+-- adsdata.c05_ccycom_item_day_sum   
+-- adsdata.C05_FIRST_ITEM_DAY_SUM
+-- adsdata.C05_LAST_ITEM_DAY_SUM
+copy  adsdata.c05_ccycom_item_day_sum to '/data/backup/SCBAK/transfer/fjy20140118/adsdata.c05_ccycom_item_day_sum_107.txt';
+
+
+ssh gpadmin@31.2.2.69
+psql whrcb_edw
+create table adsdata.c05_ccycom_item_day_sum_107 (like adsdata.c05_ccycom_item_day_sum);
+copy  adsdata.c05_ccycom_item_day_sum_107 from '/data/backup/SCBAK/transfer/fjy20140118/adsdata.c05_ccycom_item_day_sum_107.txt';
+
+
+--上生产先备份
+ssh gpadmin@11.1.1.153
+psql whrcb_edw 
+create table adsdata.c05_ccycom_item_day_sum_bak0118 (like adsdata.c05_ccycom_item_day_sum);
+insert into adsdata.c05_ccycom_item_day_sum_bak0118 select * from adsdata.c05_ccycom_item_day_sum;
+
+--################验证及上生产
+ssh gpadmin@31.2.2.107
+cd /data/backup/SCBAK/transfer
+# 69 # /data/backup/SCBAK/transfer
+mkdir fjy20140118
+psql whrcb_edw
+-- adsdata.c05_ccycom_item_day_sum   
+-- adsdata.C05_FIRST_ITEM_DAY_SUM
+-- adsdata.C05_LAST_ITEM_DAY_SUM
+copy  adsdata.c05_ccycom_item_day_sum to '/data/backup/SCBAK/transfer/fjy20140118/adsdata.c05_ccycom_item_day_sum_107.txt';
+
+
+ssh gpadmin@31.2.2.69
+psql whrcb_edw
+create table adsdata.c05_ccycom_item_day_sum_107 (like adsdata.c05_ccycom_item_day_sum);
+copy  adsdata.c05_ccycom_item_day_sum_107 from '/data/backup/SCBAK/transfer/fjy20140118/adsdata.c05_ccycom_item_day_sum_107.txt';
+
+
+--上生产先备份 *_bak
+ssh gpadmin@11.1.1.153
+psql whrcb_edw 
+create table adsdata.c05_ccycom_item_day_sum_bak0118 (like adsdata.c05_ccycom_item_day_sum);
+insert into adsdata.c05_ccycom_item_day_sum_bak0118 select * from adsdata.c05_ccycom_item_day_sum;
+
+--################  ETLmonitor  |  sh auto2.sh start_dt end_dt
+
+select rownum,t.* from ETL_JOB_STREAM_20140116 t 
+connect by prior t.stream_job=t.etl_job
+start with t.etl_job='C05_CCYCOM_ITEM_DAY_SUM';
+
+select stream_job from (
+select rownum,t.etl_job,t.stream_job from ETL_JOB_STREAM t 
+connect by prior t.stream_job=t.etl_job
+start with t.etl_job='C05_CCYCOM_ITEM_DAY_SUM'
+);
+
+create table ETL_JOB_TIMEWINDOW_0119 as select * from ETL_JOB_TIMEWINDOW ;
+create table ETL_JOB_STREAM_0119 as select * from ETL_JOB_STREAM  ;
+create table ETL_JOB_SOURCE_0119     as select * from ETL_JOB_SOURCE      ;
+create table ETL_JOB_DEPENDENCY_0119 as select * from ETL_JOB_DEPENDENCY  ;
+create table ETL_JOB_0119            as select * from ETL_JOB             ;
+create table CONTROL_TASK_0119   as select * from CONTROL_TASK    ;
+
+
+delete from etl_job_stream;
+commit;
+
+delete from etl_job_ini;
+commit;
+insert into etl_job_ini 
+	select stream_job from (
+	select rownum,t.etl_job,t.stream_job from ETL_JOB_STREAM t 
+	connect by prior t.stream_job=t.etl_job
+	start with t.etl_job='C05_CCYCOM_ITEM_DAY_SUM'
+	);
+commit;
+
+-- 20131231~yesterday
+update etl_job set last_txdate=to_date('20131230','yyyymmdd') where etl_job in (select * from etl_job_ini);
+commit;
+
+-- check & run
+
+set linesize 200
+select etl_job,last_txdate,last_jobstatus from etl_job where etl_job in (select * from etl_job_ini);
+select count(*) from etl_job_stream;
+
+host cat /tmp/wjy/ETLmonitor/ETLmonitor.cfg.bak
+
+host cat /tmp/wjy/ETLmonitor/auto2.sh
+
+cd /tmp/wjy/ETLmonitor
+sh auto2.sh 20131231 20140118
+
+
+--################
+insert into etl_job_stream select * from ETL_JOB_STREAM_20140119;
+commit;
+
+select count(*) from etl_job;
+select count(*) from etl_job_stream;
+select count(*) from etl_job_dependency;
+select count(*) from etl_job_source;
+select count(*) from etl_job_DEPENDENCY;
+select count(*) from CONTROL_TASK;
+
+select count(*) from etl_job where etl_job like 'U01%';
+--U01+U02=70
+
+
+--################
+sqlplus dm_user/dm_user@11.1.1.184/dshdb
+select * from ETL_ROUTINE_CONTROL;
+
+
+# 20130906 ~ 20131230
+#在这里放要执行的脚本#
+aa=20131231
+aa=`date -d "$aa 1 days" "+%Y%m%d"`
+cd /home/infa/ADM/bin_develop
+do
+done
+echo $aa
+sleep 2
+ssh infa@11.1.1.167
+
+aa=20140101
+while [ $aa -le 20140118 ]
+do
+echo $aa
+echo perl wf_p_load.pl
+perl wf_p_load.pl
+sleep 2
+aa=`date -d "$aa 1 days" "+%Y%m%d"`
+done
+
+
+--################
+select count(*) from information_schema.tables t where t.table_schema='sdsdata' and t.table_name like '%_0103';
+select count(*) from information_schema.tables t where t.table_schema='sdsdata' and t.table_name like '%_0102';
+
+--################
+perl /EDW/ETL/INSTANCE/ETL1/bin/etlslave_unix.pl R01_R01_LOAN_VILLAGE_M_SUM_20130930.dir
+sh -c perl /EDW/ETL/INSTANCE/ETL1/APP/R01/R01_LOAN_VILLAGE_M_SUM/bin/r01_loan_village_m_sum0400.pl R01_R01_LOAN_VILLAGE_M_SUM_20130930.dir > /EDW/ETL/INSTANCE/ETL1/LOG/R01/20140120/r01_loan_village_m_sum0400.pl.20.log
+perl /EDW/ETL/INSTANCE/ETL1/APP/R01/R01_LOAN_VILLAGE_M_SUM/bin/r01_loan_village_m_sum0400.pl R01_R01_LOAN_VILLAGE_M_SUM_20130930.dir
+

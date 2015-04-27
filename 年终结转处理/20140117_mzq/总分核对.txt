@@ -1,0 +1,229 @@
+
+select a.subacct,a.accstat,a.lasttrandate,a.opendate,a.lastbal,b.agt_bal from bdsdata.T03_AGT_BAL_HIS  B 
+inner join sdsdata.s01_dpssaveaccdyninfo0102  A 
+on  A.SUBACCT=B.agt_no 
+and B.s_date <='2014-01-02' and B.e_date >'2014-01-02'
+and b.group_no = '2'
+where a.subctrlcode='2001001'
+and a.ccy='01'
+and b.agt_bal <> a.lastbal;
+
+select a.subacct,a.accstat,a.lasttrandate,a.opendate,a.lastbal,b.agt_bal from bdsdata.T03_AGT_BAL_HIS  B 
+inner join sdsdata.s01_dpssaveaccdyninfo0102  A 
+on  A.SUBACCT=B.agt_no 
+and B.s_date <='2014-01-02' and B.e_date >'2014-01-02'
+and b.group_no = '2'
+where  a.ccy='01'
+and b.agt_bal <> a.lastbal;
+
+select a.subacct,a.accstat,a.lasttrandate,a.opendate,a.lastbal,b.agt_bal from bdsdata.T03_AGT_BAL_HIS  B 
+inner join sdsdata.s01_dpssaveaccdyninfo0101  A 
+on  A.SUBACCT=B.agt_no 
+and B.s_date <='2014-01-01' and B.e_date >'2014-01-01'
+and b.group_no = '2'
+where  a.ccy='01'
+and b.agt_bal <> a.lastbal;
+
+select a.subacct,a.accstat,a.lasttrandate,a.opendate,a.lastbal,b.agt_bal from bdsdata.T03_AGT_BAL_HIS  B 
+inner join sdsdata.s01_dpssaveaccdyninfo0103  A 
+on  A.SUBACCT=B.agt_no 
+and B.s_date <='2014-01-03' and B.e_date >'2014-01-03'
+and b.group_no = '2'
+where  a.ccy='01'
+and b.agt_bal <> a.lastbal;
+
+
+-- 总分核对
+select a1.Item_no, a1.ccy_cd, sum(a1.Day_Crd_Bal)
+             from adsdata.C05_Last_Item_Day_Sum a1 /*末级科目日汇总表*/
+              inner join bdsdata.T04_INTER_ORG_HIS A3
+           on a1.org_no=a3.org_no   and A3.FLAG_1_CD = '1'
+           and a3.s_date <='2014-01-02' and a3.e_date >'2014-01-02'
+            where a1.Statst_Dt = date('2014-01-02')
+              and (substr(a1.Item_no, 1, 4) in
+                  ('2001',
+                    '2002',
+                    '2003',
+                    '2004',
+                    '2005',
+                    '2006',
+                    '2011',
+                    '2012',
+                    '2014') or a1.Item_no in ('2017006', '2017205')) and a1.Item_no not in('2005003')
+            group by 1, 2
+except all
+select Item_Cd, ccy_cd, sum(day_bal)
+  from (select a1.Item_Cd, a1.ccy_cd, sum(a2.Day_Bal) day_bal
+          from adsdata.C01_Cur_Deposit_Property a1  /*活期存款*/
+          left join  adsdata.C01_Deposit_Day_Sum a2
+            on a1.Clause_No = a2.Clause_No
+           and a1.Statst_Dt = a2.Statst_Dt
+            inner join bdsdata.T04_INTER_ORG_HIS A3
+           on a1.acct_attr_org_no=a3.org_no   and A3.FLAG_1_CD = '1'
+           and a3.s_date <='2014-01-02' and a3.e_date >'2014-01-02'
+         where a1.Statst_Dt = date('2014-01-02')
+           and (substr(a1.Item_Cd, 1, 4) in
+               ('2001',
+                 '2002',
+                 '2003',
+                 '2004',
+                 '2005',
+                 '2006',
+                 '2011',
+                 '2012',
+                 '2014') or a1.Item_Cd in ('2017006', '2017205')) and a1.Item_Cd not in('2005003')
+         group by 1, 2
+        union all
+        select a1.Item_Cd, a1.ccy_cd, sum(a2.Day_Bal) day_bal
+          from  adsdata.c01_Regular_Deposit_Property a1  /*定期存款*/
+          left join  adsdata.C01_Deposit_Day_Sum a2
+            on a1.Clause_No = a2.Clause_No
+           and a1.Statst_Dt = a2.Statst_Dt
+            inner join bdsdata.T04_INTER_ORG_HIS A3
+           on a1.acct_attr_org_no=a3.org_no   and A3.FLAG_1_CD = '1'
+          and a3.s_date <='2014-01-02' and a3.e_date >'2014-01-02'
+         where a1.Statst_Dt = date('2014-01-02')
+           and (substr(a1.Item_Cd, 1, 4) in
+               ('2001',
+                 '2002',
+                 '2003',
+                 '2004',
+                 '2005',
+                 '2006',
+                 '2011',
+                 '2012',
+                 '2014') or a1.Item_Cd in ('2017006', '2017205')) and a1.Item_Cd not in('2005003')
+         group by 1, 2
+        union all     
+        select a1.item_cd, a1.ccy_cd, sum(a2.day_bal) day_bal
+          from adsdata.c05_Inner_Acct_Prop_His a1  /*内部账户*/
+          left join adsdata.c05_Inner_Acct_Day_Sum a2
+            on a1.statst_dt = a2.statst_dt
+           and a1.acct_no = a2.acct_no
+            inner join bdsdata.T04_INTER_ORG_HIS A3
+           on  a1.attr_org_no=a3.org_no   and A3.FLAG_1_CD = '1'
+          and a3.s_date <='2014-01-02' and a3.e_date >'2014-01-02'
+         where (substr(a1.item_cd, 1, 4) in ('2011','2012') or a1.item_cd  in ('2017006', '2017005') ) and a1.Item_Cd not in('2005003')
+           and a1.statst_dt = '2014-01-02'
+         group by 1, 2) a
+ group by 1,2
+ ;
+
+ \timing
+
+select a1.Item_no, a1.ccy_cd, sum(a1.Day_Crd_Bal)
+             from adsdata.C05_Last_Item_Day_Sum a1 /*末级科目日汇总表*/
+              inner join bdsdata.T04_INTER_ORG_HIS A3
+           on a1.org_no=a3.org_no   and A3.FLAG_1_CD = '1'
+           and a3.s_date <='2014-01-03' and a3.e_date >'2014-01-03'
+            where a1.Statst_Dt = date('2014-01-03')
+              and (substr(a1.Item_no, 1, 4) in
+                  ('2001',
+                    '2002',
+                    '2003',
+                    '2004',
+                    '2005',
+                    '2006',
+                    '2011',
+                    '2012',
+                    '2014') or a1.Item_no in ('2017006', '2017205')) and a1.Item_no not in('2005003')
+            group by 1, 2
+except all
+select Item_Cd, ccy_cd, sum(day_bal)
+  from (select a1.Item_Cd, a1.ccy_cd, sum(a2.Day_Bal) day_bal
+          from adsdata.C01_Cur_Deposit_Property a1  /*活期存款*/
+          left join  adsdata.C01_Deposit_Day_Sum a2
+            on a1.Clause_No = a2.Clause_No
+           and a1.Statst_Dt = a2.Statst_Dt
+            inner join bdsdata.T04_INTER_ORG_HIS A3
+           on a1.acct_attr_org_no=a3.org_no   and A3.FLAG_1_CD = '1'
+           and a3.s_date <='2014-01-03' and a3.e_date >'2014-01-03'
+         where a1.Statst_Dt = date('2014-01-03')
+           and (substr(a1.Item_Cd, 1, 4) in
+               ('2001',
+                 '2002',
+                 '2003',
+                 '2004',
+                 '2005',
+                 '2006',
+                 '2011',
+                 '2012',
+                 '2014') or a1.Item_Cd in ('2017006', '2017205')) and a1.Item_Cd not in('2005003')
+         group by 1, 2
+        union all
+        select a1.Item_Cd, a1.ccy_cd, sum(a2.Day_Bal) day_bal
+          from  adsdata.c01_Regular_Deposit_Property a1  /*定期存款*/
+          left join  adsdata.C01_Deposit_Day_Sum a2
+            on a1.Clause_No = a2.Clause_No
+           and a1.Statst_Dt = a2.Statst_Dt
+            inner join bdsdata.T04_INTER_ORG_HIS A3
+           on a1.acct_attr_org_no=a3.org_no   and A3.FLAG_1_CD = '1'
+          and a3.s_date <='2014-01-03' and a3.e_date >'2014-01-03'
+         where a1.Statst_Dt = date('2014-01-03')
+           and (substr(a1.Item_Cd, 1, 4) in
+               ('2001',
+                 '2002',
+                 '2003',
+                 '2004',
+                 '2005',
+                 '2006',
+                 '2011',
+                 '2012',
+                 '2014') or a1.Item_Cd in ('2017006', '2017205')) and a1.Item_Cd not in('2005003')
+         group by 1, 2
+        union all     
+        select a1.item_cd, a1.ccy_cd, sum(a2.day_bal) day_bal
+          from adsdata.c05_Inner_Acct_Prop_His a1  /*内部账户*/
+          left join adsdata.c05_Inner_Acct_Day_Sum a2
+            on a1.statst_dt = a2.statst_dt
+           and a1.acct_no = a2.acct_no
+            inner join bdsdata.T04_INTER_ORG_HIS A3
+           on  a1.attr_org_no=a3.org_no   and A3.FLAG_1_CD = '1'
+          and a3.s_date <='2014-01-03' and a3.e_date >'2014-01-03'
+         where (substr(a1.item_cd, 1, 4) in ('2011','2012') or a1.item_cd  in ('2017006', '2017005') ) and a1.Item_Cd not in('2005003')
+           and a1.statst_dt = '2014-01-03'
+         group by 1, 2) a
+ group by 1,2
+ ;
+  item_no | ccy_cd | sum  
+---------+--------+------
+ 2005001 | 978    | 0.00
+ 2005001 | 702    | 0.00
+ 2005001 | 124    | 0.00
+ 2005001 | 756    | 0.00
+ 2005001 | 826    | 0.00
+ 2005001 | 036    | 0.00
+ 2005001 | 156    | 0.00
+ 2005001 | 344    | 0.00
+ 2005001 | 840    | 0.00
+ 2005001 | 392    | 0.00
+(10 行记录)
+
+时间：51374.721 ms
+------------------
+select a.subacct,a.accstat,a.lasttrandate,a.opendate,a.lastbal,b.agt_bal from bdsdata.T03_AGT_BAL_HIS  B 
+inner join sdsdata.s01_dpstermaccdyninfo0102  A 
+on  A.SUBACCT=B.agt_no 
+and B.s_date <='2014-01-02' and B.e_date >'2014-01-02'
+--and b.group_no = '3'
+where a.subctrlcode='2002001'
+and a.ccy='01'
+and b.agt_bal <> a.lastbal;
+
+select a.subacct,a.accstat,a.lasttrandate,a.opendate,a.lastbal,b.agt_bal from bdsdata.T03_AGT_BAL_HIS  B 
+inner join sdsdata.s01_dpstermaccdyninfo0101  A 
+on  A.SUBACCT=B.agt_no 
+and B.s_date <='2014-01-01' and B.e_date >'2014-01-01'
+--and b.group_no = '3'
+where a.subctrlcode='2002001'
+and a.ccy='01'
+and b.agt_bal <> a.lastbal;
+
+select a.subacct,a.accstat,a.lasttrandate,a.opendate,a.lastbal,b.agt_bal from bdsdata.T03_AGT_BAL_HIS  B 
+inner join sdsdata.s01_dpstermaccdyninfo0103  A 
+on  A.SUBACCT=B.agt_no 
+and B.s_date <='2014-01-03' and B.e_date >'2014-01-03'
+--and b.group_no = '3'
+where a.subctrlcode='2002001'
+and a.ccy='01'
+and b.agt_bal <> a.lastbal;

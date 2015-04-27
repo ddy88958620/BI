@@ -1,0 +1,320 @@
+EXEC SQL INCLUDE <comm.h>;
+
+
+DeleteSpace( char *ss )
+{
+  int i;
+  i = strlen(ss)-1;
+  while ( i && ss[i] == ' ' ) i--;
+  ss[i+1] = 0;
+}
+
+
+int SplitBuf1(char *buf1, char sch, char tc,int stno)  /* 字符串以ch结束 */
+{
+  char *ss0, *ss1;
+  int  i,j;
+  char T[500][500];
+
+  ss0 = buf1; i = 0;
+  while ( (ss1=strchr( ss0, sch )) != NULL )  {
+     *ss1 = 0; strcpy( T[i], ss0 );
+     i++; ss0= ss1+1; *ss1= sch;
+  }
+
+  if ( tc=='C' ) for (j=0;j<i;j++) {strcpy(CmdStr[stno+j],T[j]);DeleteSpace(CmdStr[stno+j]);}
+  else  for (j=0;j<i;j++) {strcpy(TmpStrs[stno+j],T[j]);DeleteSpace(TmpStrs[stno+j]);}
+  return( i );
+}
+
+int SplitBuf2(char *buf2, char sch, char tc,int stno)  /* 字符串不以sch结束 */
+{
+  char *ss0, *ss1;
+  int  i,j;
+  char T[500][500];
+
+  ss0 = buf2; i = 0;
+  while ( (ss1=strchr( ss0, sch )) != NULL )  {
+      *ss1 = 0; strcpy( T[stno+i], ss0 );
+      i++; ss0= ss1+1; *ss1= sch;
+  }
+  strcpy( T[stno+i], ss0 );   i++;
+  if ( tc=='C' ) for (j=stno;j<stno+i;j++) {strcpy(CmdStr[j],T[j]);DeleteSpace(CmdStr[j]);}
+  else  for (j=stno;j<stno+i;j++) {strcpy(TmpStrs[j],T[j]);DeleteSpace(TmpStrs[j]);}
+  return( i );
+}
+
+GetCurrentTime(int secs,char *stime)
+{
+   time_t  timer;
+   struct tm nowtimer;
+   char oprtime[20];
+
+   time( &timer ); timer += secs;
+   nowtimer = *localtime ( &timer );
+   sprintf(oprtime,"%04u-%02u-%02u %02u:%02u:%02u",
+      nowtimer.tm_year+1900, nowtimer.tm_mon+1, nowtimer.tm_mday,
+      nowtimer.tm_hour, nowtimer.tm_min, nowtimer.tm_sec );
+   strcpy( stime,oprtime );
+   return(0);
+}
+
+GetStrTime(int secs,char *stime)
+{
+   time_t  timer;
+   struct tm nowtimer;
+   char oprtime[20];
+
+   time( &timer ); timer += secs;
+   nowtimer = *localtime ( &timer );
+   sprintf(oprtime,"%04u%02u%02u-%02u%02u%02u",
+      nowtimer.tm_year+1900, nowtimer.tm_mon+1, nowtimer.tm_mday,
+      nowtimer.tm_hour, nowtimer.tm_min, nowtimer.tm_sec );
+   strcpy( stime,oprtime );
+   return(0);
+}
+
+GetCurrentDate(int secs,char *stime)
+{
+   time_t  timer;
+   struct tm nowtimer;
+   char oprtime[20];
+
+   time( &timer ); timer += secs;
+   nowtimer = *localtime ( &timer );
+   sprintf(oprtime,"%04u%02u%02u",
+      nowtimer.tm_year+1900, nowtimer.tm_mon+1, nowtimer.tm_mday);
+   strcpy( stime,oprtime );
+   return(0);
+}
+
+PutEnv(char *sBashrc,char *IdStr)
+{
+  FILE *envfp;
+  char envname[100],tmpbuf[250],idstr[50];
+  char envbuf[20][250];
+  int  i;
+
+  i = 0;
+  strcpy(envname,sBashrc);
+  if ( ( envfp=fopen(envname,"r" ) ) == NULL ) return( -1 );
+  while( fgets( tmpbuf, 250, envfp )!=NULL ) {
+     tmpbuf[strlen(tmpbuf)-1] = 0;
+     if ( tmpbuf[0]=='#' || tmpbuf[0]==';' ) continue;
+     sscanf(tmpbuf,"%s %s", idstr, envbuf[i]);
+     if ( strcmp(IdStr, idstr) ) continue;
+     putenv(envbuf[i]); i++;
+  }
+  return( 0 );
+}
+
+int CountFileLine(char * filename)
+{
+  FILE * cfp;
+  int  i,j;
+  char tmpbuf[5000];
+  i = 0;
+  if ( ( cfp=fopen(filename,"r" ) ) == NULL ) return( -1 );
+  while( fgets( tmpbuf, 5000, cfp )!=NULL ) { i++; }
+  fclose(cfp);
+  return( i );
+}
+
+int Y_M_DToYMD(char *ymd, char *y_m_d)
+{
+  char *ss, *ss1, *ss2;
+  
+  ss = y_m_d;
+  ss1 = ymd;
+  strncpy(ss1, ss, 4);	ss1 += 4;  ss += 5;
+  strncpy(ss1, ss, 2);  ss1 += 2;  ss += 3;
+  strncpy(ss1, ss, 2);  
+  
+  *(ymd + 8) = 0;
+  
+  return(0);
+}
+
+GetYesDay( char *ytime0, char *ytime1 )
+{
+   char _ytime[20], stime[10];
+   GetCurrentDate( -86400, stime );
+   strncpy( _ytime, stime, 4 );_ytime[4] = 0;
+   strcat( _ytime, "-" );_ytime[5] = 0;
+   strncat( _ytime, stime+4, 2 );_ytime[7] = 0;
+   strcat( _ytime, "-" );_ytime[8] = 0;
+   strncat( _ytime, stime+6, 2 );_ytime[10] = 0;
+   strcat( _ytime, " 00:00:00" );_ytime[19] = 0;
+   strcpy( ytime0, _ytime );
+   strcpy( _ytime + 11, "23:59:59" );_ytime[19] = 0;
+   strcpy( ytime1, _ytime );
+   return ( 0 );
+}
+
+int GetKind(char *stime,char *etime)
+{
+  char syear[5],smon[3],eyear[5],emon[3];
+  int isyear,ismon,ieyear,iemon;
+  int iresult=-1;
+
+  strncpy(syear,stime,4);strncpy(smon,stime+4,2);
+  syear[4]=0;smon[2]=0;
+  strncpy(eyear,etime,4);strncpy(emon,etime+4,2);
+  eyear[4]=0;emon[2]=0;
+  isyear=atoi(syear);ismon=atoi(smon);
+  ieyear=atoi(eyear);iemon=atoi(emon);
+  if((ieyear<isyear)||((ieyear==isyear)&&(iemon<ismon))) return(iresult);
+  if(iemon<ismon){
+    iemon=iemon+12;ieyear=ieyear-1;
+  }
+  iresult=iemon-ismon+(ieyear-isyear)*12;
+
+  return(iresult);
+}
+
+int ReplaceStr( char * s1, char * s2, char * s3 )
+{
+  char buf[1000], tmp[1000], * ss, * s4;
+  int i = 0;
+
+  if ( ( ss = strstr( s1, s2 ) ) != NULL ){
+    strncpy( buf, s1, strlen( s1) -strlen( ss ) );
+    buf[strlen( s1) -strlen( ss )] = 0;
+    ss = ss + strlen( s2 );
+    strcpy( tmp, ss );
+    strcat( buf, s3 );
+    strcat( buf, tmp );
+  }else strcpy( buf, s1 );
+  s1 = s1 -i;
+  strcpy( s1, buf );
+  return( 0 );
+}
+
+int ReplaceStr2( char *str,char *sfrom,char *sto )    /* 可替换多次出现的字符串，返回替换次数 */
+{
+  int ifrom,i;
+  char tmpss[500],srepl[500],*pstr;
+
+  ifrom = strlen( sfrom );
+  strcpy( tmpss,str );
+  i = 0;
+  while ( (pstr=strstr(tmpss,sfrom))!=NULL ) {
+    *pstr = 0;
+    if ( i==0 ) strcpy( srepl,tmpss );
+    else strcat( srepl,tmpss );
+    strcat( srepl,sto );
+    strcpy( tmpss,pstr+ifrom );
+    i++;
+  }
+  strcat( srepl,tmpss );
+  strcpy( str,srepl );
+  return(i);
+}
+
+
+/* 计算某年月的天数并返回天数 */
+int GetDaysOfYearmon(char *yearmon)
+{
+  char yy[10],mm[10];
+  int  y,m,d;
+
+  strncpy(yy,yearmon,  4);  yy[4]=0;  y=atoi(yy);
+  strncpy(mm,yearmon+4,2);  mm[2]=0;  m=atoi(mm);
+
+  switch(m) {
+     case 1:
+     case 3:
+     case 5:
+     case 7:
+     case 8:
+     case 10:
+     case 12:
+          d=31;  break;
+     case 4:
+     case 6:
+     case 9:
+     case 11:
+          d=30;  break;
+     case 2:
+          if ( ( y%4==0 && y%100!=0 ) || y%400==0 ) d=29; else d=28;
+          break;
+     default: d=30; break;
+   }
+
+  return( d );
+}
+
+ToUpper(char *ss)
+{
+  while (*ss) *ss++=toupper(*ss);
+  return(0);
+}
+
+ToLower(char *ss)
+{
+  while (*ss) *ss++=tolower(*ss);
+  return(0);
+}
+
+
+
+int _NameCmp( s1, s2 )
+struct DirBufStruct *s1,*s2;
+{
+   return( strcmp(s1->fname, s2->fname) );
+}
+
+int _DateCmp( s1, s2 )
+struct DirBufStruct *s1,*s2;
+{
+   return( s1->dates - s2->dates );
+}
+
+int _SizeCmp( s1, s2 )
+struct DirBufStruct *s1,*s2;
+{
+   return( s1->size - s2->size );
+}
+
+int ReadSortDir( dirname, nums, flag, type )
+char *dirname;
+int nums, flag;
+char *type;
+{
+  int   i,j;
+  DIR   *dirfp;
+  struct dirent  *sdir;
+  struct stat    ustat;
+  char fname[400];
+  if ( (dirfp=opendir( dirname )) == NULL){
+    /* CheckError( DEBDEBUG, "dir=%s, errno=%d\n", dirname, errno ); */
+    return( -1 );
+  }
+  i = 0;
+  while ( (sdir=readdir(dirfp)) != NULL ) {
+    sprintf(fname,"%s/%s",dirname,sdir->d_name);
+    if ( stat(fname, &ustat) )  {
+      /* CheckError( DEBDEBUG, "dir=%s, fname=%s, errno=%d\n", dirname, fname, errno ); */
+      closedir(dirfp);
+      return( -1 );
+    }
+    if ( !flag && ustat.st_mode & 0040000 ) continue;
+    strcpy( DirBuf[i].fname, sdir->d_name );
+    DirBuf[i].dates = ustat.st_mtime;
+    DirBuf[i].mode  = ustat.st_mode;
+    DirBuf[i].size  = ustat.st_size;
+    DirBuf[i].mark  = 0;
+    i++;
+    if( i >= nums )  break;
+  }
+  closedir(dirfp);
+  /* for (j=0;j<i;j++) CheckError(DEBDEBUG,"f[%d]=%s=\n",j,DirBuf[j].fname); */
+  if ( !strcmp(type,"NAME") )
+     qsort( &DirBuf[0], i, sizeof(struct DirBufStruct),_NameCmp);
+  else if ( !strcmp(type,"DATE") )
+     qsort( &DirBuf[0], i, sizeof(struct DirBufStruct),_DateCmp);
+  else if ( !strcmp(type,"SIZE") )
+     qsort( &DirBuf[0], i, sizeof(struct DirBufStruct),_SizeCmp);
+  return( i );
+}
+

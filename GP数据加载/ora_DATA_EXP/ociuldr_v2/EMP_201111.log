@@ -1,0 +1,65 @@
+
+SQL*Loader: Release 10.1.0.2.0 - Production on 星期四 9月 13 11:43:43 2012
+
+Copyright (c) 1982, 2004, Oracle.  All rights reserved.
+
+控制文件:    ./EMP_201111_sqlldr.ctl
+数据文件:       EMP_201111.txt
+文件处理选项字符串: "STR X'0a'"
+  错误文件:      ./EMP_201111.bad
+废弃文件: 未作指定
+: 
+(可废弃所有记录)
+
+要加载的数: ALL
+要跳过的数: 0
+允许的错误: ALL
+绑定数组: 50000 行, 最大 2097152 字节
+继续:    未作指定
+所用路径:       常规
+
+表 EMP_201111,已加载从每个逻辑记录
+插入选项对此表 APPEND 生效
+TRAILING NULLCOLS 选项生效
+
+   列名                        位置      长度  中止 包装数据类型
+------------------------------ ---------- ----- ---- ---- ---------------------
+"EMP_NO"                            FIRST     6   ,       CHARACTER            
+    NULL if "EMP_NO" = BLANKS
+"ENAME"                              NEXT    10   ,       CHARACTER            
+    NULL if "ENAME" = BLANKS
+"JOB"                                NEXT     9   ,       CHARACTER            
+    NULL if "JOB" = BLANKS
+"MGR"                                NEXT     6   ,       CHARACTER            
+    NULL if "MGR" = BLANKS
+"HIREDATE"                           NEXT     *   ,       DATE YYYY-MM-DD HH24:MI:SS
+    NULL if "HIREDATE" = BLANKS
+"SAL"                                NEXT    10   ,       CHARACTER            
+    NULL if "SAL" = BLANKS
+"COMM"                               NEXT    10   ,       CHARACTER            
+    NULL if "COMM" = BLANKS
+"DEPTNO"                             NEXT     4   ,       CHARACTER            
+    NULL if "DEPTNO" = BLANKS
+
+ROWS 参数所用的值已从 50000 更改为 6393
+
+表 EMP_201111:
+  28959840 行 加载成功。
+  由于数据错误, 0 行 没有加载。
+  由于所有 WHEN 子句失败, 0 行 没有加载。
+  由于所有字段都为空的, 0 行 没有加载。
+
+
+为绑定数组分配的空间:               2096904 字节 (6393 行)
+读取   缓冲区字节数: 2097152
+
+跳过的逻辑记录总数:          0
+读取的逻辑记录总数:      28959840
+拒绝的逻辑记录总数:          0
+废弃的逻辑记录总数:        0
+
+从 星期四 9月  13 11:43:43 2012 开始运行
+在 星期四 9月  13 11:50:35 2012 处运行结束
+
+经过时间为: 00: 06: 51.72
+CPU 时间为: 00: 02: 41.26

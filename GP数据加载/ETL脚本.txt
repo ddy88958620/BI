@@ -1,0 +1,97 @@
+
+var conn = "209db2";    //CI数据库信息
+var connetl = "etlserver";
+//var rep_name = env.getValue("rep_name")+""; //取数报表标识
+var rep_name = "ZXTY021"; //取数报表标识
+//var sys_unitcode = env.getValue("sys_unitcode")+""; //取数报表标识
+
+//查询已设置的时期
+function getPeriod()
+{
+    var strPeriod = "";
+      var sql_period = "select  from ";
+      logger.debug("%%%%%%%查询已设置时期%%%%%%%%%:"+sql);
+      var RstPeriod = env.querySQL(conn,sql_period); 
+      while(RstPeriod.next())
+      {
+          
+      }
+}
+
+//查询已设置的单位
+function getUnit()
+{
+    var strUnit = "";
+      var sql_Unit = "select t.sys_unitguid from zgzh.fxpj_sys_unitinfo t \n"
+         // + " where t.isUnitSet = ''";   
+      logger.debug("%%%%%%%查询已设置单位sql%%%%%%%%%:"+sql_Unit);
+      var RstUnit = env.querySQL(conn,sql_Unit);
+      while(RstUnit.next())
+      {
+          strUnit += RstUnit.get("sys_unitguid")+",";
+      }
+      logger.debug("%%%%%%%已设置单位列表%%%%%%%%%:"+strUnit);
+      return strUnit.substr(0,strUnit.length-1);
+}
+
+//查询已设置的报表
+function getReport()
+{
+    var strReport = "";
+      var sql_Report = "select t.rep_name from zgzh.sys_report t \n"
+                    // + " where  ";
+      logger.debug("%%%%%%%查询已设置报表%%%%%%%%%:"+sql_Report);
+      var RstPeriod = env.querySQL(conn,sql_Report); 
+      while(RstPeriod.next())
+      {
+          strReport += RstPeriod.get("rep_name")+",";
+      }
+      logger.debug("%%%%%%%已设置指标列表%%%%%%%%%:"+strReport);
+      return strReport.substr(0,strReport.length-1);
+}
+
+
+var sql = "select distinct z.zb_name,z.zb_title,z.zb_tablename,z.zb_fieldname from zgzh.sys_zb z" + "\n"
+ + "INNER JOIN zgzh.sys_zbmapinfo zm ON z.zb_guid=zm.zmi_expression" + "\n"
+ + "where (z.zb_isfloat=0 or z.zb_isfloat is null) and z.tsk_prefix='FXPJ' and z.zb_guid = zm.zmi_expression and z.zb_tablename like 'fxpj_tb%' " + "\n"
+ + " and zm.zml_guid in (select zml_guid from zgzh.sys_zbmapinfolist where rep_guid = ( " + "\n"
+ + " select rep_guid from zgzh.sys_report where rep_name ='"+rep_name+"' and tsk_prefix='FXPJ'))" + "\n"
+ + "and z.zb_fieldname is not null"
+
+logger.debug("%%%%%%%%%%%%%%%%%%%:"+sql);
+var result = env.querySQL(conn,sql); //查询指定报表所映射的指标值 
+while(result.next()){
+  var zb_name = result.get("zb_name");
+  var zb_title = result.get("zb_title");
+  var zb_tablename  = result.get("zb_tablename");
+  var zb_fieldvalue = result.get("zb_fieldname");
+  var zb_value_sql = "select n."+zb_fieldvalue+",n.sys_unitguid,n.sys_datayear,n.sys_datatime,n.sys_timetype,m.zb_name,m.zb_title FROM zgzh."
+                     + zb_tablename + " n,zgzh.sys_zb m,zgzh.fxpj_sys_unitinfo u \n"
+                     + " where m.zb_tablename='"+zb_tablename+"' and m.tsk_prefix='FXPJ' and m.zb_name='"+ zb_name +"' and u.sys_unitguid = n.sys_unitguid \n"  
+                     + " and n.sys_unitguid in ('"+ getUnit() +"') "   //过滤单位  我考虑了一下可以不写函数,直接在in中写sql语句实现 
+                     + " and n.sys_datayear in ('"+ getPeriod() +"') "   //过滤时期
+                     + " and n."+zb_fieldvalue+" is not null";
+//                     + "and n.sys_unitguid = u.'"+sys_unitcode+"'";
+  logger.debug("查询指定报表所映射的指标值sql=:"+zb_value_sql );
+  var zb_result =  env.querySQL(conn,zb_value_sql);
+  
+  while(zb_result.next()){
+//     logger.debug("%%%%%%%%%%%%%%%%%%%:"+zb_result);
+     var zb_fieldvalue = zb_result.get(1);
+     var sys_unitguid = zb_result.get("sys_unitguid");
+     var sys_datayear = zb_result.get("sys_datayear");
+     var sys_datatime = zb_result.get("sys_datatime");
+     var sys_timetype = zb_result.get("sys_timetype");
+     var zb_name = zb_result.get("zb_name");
+     var zb_title = zb_result.get("zb_title");
+     var insert_sql = "insert into ETLZBVALUE (sys_unitguid,sys_datayear,sys_datatime,sys_timetype,zb_name,zb_title,zb_fieldvalue)"
+        +" values ('"+ sys_unitguid +"','"+ sys_datayear +"','"+ sys_datatime +"','"+ sys_timetype +"','"+zb_name+"','"+zb_title+"','"+ zb_fieldvalue +"')";
+     logger.debug("插入的sql语句为： ------"+insert_sql);
+     env.execSQL(connetl,insert_sql);
+  }
+  zb_result.close();
+  logger.debug(zb_value_sql);
+}
+result.close();
+
+

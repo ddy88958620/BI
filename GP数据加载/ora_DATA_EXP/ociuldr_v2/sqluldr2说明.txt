@@ -1,0 +1,57 @@
+F:\fangp\ociuldr>sqluldr2.exe
+
+SQL*UnLoader: Fast Oracle Text Unloader (GZIP, Parallel), Release 4.0.1
+(@) Copyright Lou Fangxin (AnySQL.net) 2004 - 2010, all rights reserved.
+
+License: Free for non-commercial useage, else 100 USD per server.
+
+Usage: SQLULDR2 keyword=value [,keyword=value,...]
+
+Valid Keywords:
+   user    = username/password@tnsname
+   sql     = SQL file name
+   query   = select statement
+   field   = separator string between fields
+   record  = separator string between records
+   rows    = print progress for every given rows (default, 1000000)
+   file    = output file name(default: uldrdata.txt)
+   log     = log file name, prefix with + to append mode
+   fast    = auto tuning the session level parameters(YES)
+   text    = output type (MYSQL, CSV, MYSQLINS, ORACLEINS, FORM, SEARCH).
+   charset = character set name of the target database.
+   ncharset= national character set name of the target database.
+   parfile = read command option from parameter file
+
+  for field and record, you can use '0x' to specify hex character code,
+  \r=0x0d \n=0x0a |=0x7c ,=0x2c, \t=0x09, :=0x3a, #=0x23, "=0x22 '=0x27
+
+
+F:\fangp\ociuldr>SQLULDR2
+
+SQL*UnLoader: Fast Oracle Text Unloader (GZIP, Parallel), Release 4.0.1
+(@) Copyright Lou Fangxin (AnySQL.net) 2004 - 2010, all rights reserved.
+
+License: Free for non-commercial useage, else 100 USD per server.
+
+Usage: SQLULDR2 keyword=value [,keyword=value,...]
+
+Valid Keywords:
+   user    = username/password@tnsname
+   sql     = SQL file name
+   query   = select statement
+   field   = separator string between fields
+   record  = separator string between records
+   rows    = print progress for every given rows (default, 1000000)
+   file    = output file name(default: uldrdata.txt)
+   log     = log file name, prefix with + to append mode
+   fast    = auto tuning the session level parameters(YES)
+   text    = output type (MYSQL, CSV, MYSQLINS, ORACLEINS, FORM, SEARCH).
+   charset = character set name of the target database.
+   ncharset= national character set name of the target database.
+   parfile = read command option from parameter file
+
+  for field and record, you can use '0x' to specify hex character code,
+  \r=0x0d \n=0x0a |=0x7c ,=0x2c, \t=0x09, :=0x3a, #=0x23, "=0x22 '=0x27
+
+
+F:\fangp\ociuldr>

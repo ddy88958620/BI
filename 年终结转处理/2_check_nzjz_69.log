@@ -1,0 +1,151 @@
+-- 一、损益类比对：
+--总行比对：生产与验证环境一致
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum--生产 
+where statst_Dt ='20131231' and item_no like '6%' and org_no ='01900' and ccy_cd not in ('R01','U01','T01','Z01');
+      sum       |      sum       
+----------------+----------------
+ 13527162792.48 | 17616991470.78
+(1 row)
+
+--13527162792.48;17616991470.78
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum_bak --验证
+where statst_Dt ='20131231' and item_no like '6%' and org_no ='01900' and ccy_cd not in ('R01','U01','T01','Z01');
+      sum       |      sum       
+----------------+----------------
+ 13527162792.48 | 17616991470.78
+(1 row)
+
+--13527162792.48;17616991470.78
+--一级支行汇总比对：生产为0，验证有值；
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum --生产 
+where statst_Dt ='20131231' and item_no like '6%' and org_no ='01904' and ccy_cd not in ('R01','U01','T01','Z01');
+ sum  | sum  
+------+------
+ 0.00 | 0.00
+(1 row)
+
+--0.00;0.00
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum_bak--验证
+where statst_Dt ='20131231' and item_no like '6%' and org_no ='01904' and ccy_cd not in ('R01','U01','T01','Z01');
+     sum      |     sum      
+--------------+--------------
+ 303097468.54 | 571208548.40
+(1 row)
+
+--303097468.54;571208548.40
+--二级支行汇总比对： 生产为0，验证有值
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum --生产 
+where statst_Dt ='20131231' and item_no like '6%' and org_no ='01059' and ccy_cd not in ('R01','U01','T01','Z01');
+ sum  | sum  
+------+------
+ 0.00 | 0.00
+(1 row)
+
+--0.00;0.00
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum_bak--验证
+where statst_Dt ='20131231' and item_no like '6%' and org_no ='01059' and ccy_cd not in ('R01','U01','T01','Z01');
+     sum     |     sum     
+-------------+-------------
+ 23040565.26 | 36045461.48
+(1 row)
+
+--23040565.26;36045461.48
+-- 二、非损益类比对：
+--全行比对：
+--临时四批次、五批次  数据不一致；
+select sum(currdbbal),sum(currcrbal) from sdsdata.s01_glssubdyn1231 where subctrlcode like '1001%' ;
+     sum      | sum  
+--------------+------xxxxx
+ 701148208.72 | 0.00
+(1 row)
+
+--5批次：701148208.72;0.00    
+select sum(currdbbal),sum(currcrbal) from sdsdata.s01_glssubdyntmp11231 where subctrlcode like'1001%' and brccode ='01001' ;
+     sum     | sum  
+-------------+------
+ 81992300.00 | 0.00
+(1 row)
+
+--4批次：701157708.72;0.00
+--基础总账表： 生产、验证一致
+select sum(cur_deb_bal),sum(cur_crd_bal) from bdsdata.T09_GL_ITEM_DYNAM_HIS 
+where s_date<= date'20131231' and e_date >'20131231' and item_ctrl_field like '1001%';
+     sum      | sum  
+--------------+------
+ 701148208.72 | 0.00
+(1 row)
+
+-- 生产：701148208.72;0.00
+select sum(cur_deb_bal),sum(cur_crd_bal) from bdsdata.T09_GL_ITEM_DYNAM_HIS_BAK 
+where s_date<= date'20131231' and e_date >'20131231' and item_ctrl_field like '1001%';
+     sum      | sum  
+--------------+------
+ 701148208.72 | 0.00
+(1 row)
+
+--验证：701148208.72;0.00
+--汇总末级科目表： 生产第四批次数据，验证第五批次数据
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_last_item_day_sum where statst_Dt ='20131231' and item_no like '1001%';
+     sum      | sum  
+--------------+------
+ 701157708.72 | 0.00
+(1 row)
+
+--生产：701157708.72
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_last_item_day_sum_bak where statst_Dt ='20131231' and item_no like '1001%';
+     sum      | sum  
+--------------+------
+ 701148208.72 | 0.00
+(1 row)
+
+--验证环境：701148208.72
+--汇总一级科目表：生产第四批次数据，验证第五批次数据
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_first_item_day_sum where statst_Dt ='20131231' and item_no ='1001';
+     sum      | sum  
+--------------+------
+ 701157708.72 | 0.00
+(1 row)
+
+--生产：701157708.72;
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_first_item_day_sum_bak where statst_Dt ='20131231' and item_no ='1001';
+     sum      | sum  
+--------------+------
+ 701148208.72 | 0.00
+(1 row)
+
+--验证环境：701148208.72;
+--汇总总账表：生产第四批次数据，验证第五批次数据
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum 
+where statst_Dt ='20131231' and item_no = '1001' and org_no ='01900' and ccy_cd not in ('R01','U01','T01','Z01');
+     sum      | sum  
+--------------+------
+ 701157708.72 | 0.00
+(1 row)
+
+--生产：701157708.72
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum_bak
+where statst_Dt ='20131231' and item_no = '1001' and org_no ='01900' and ccy_cd not in ('R01','U01','T01','Z01');
+     sum      | sum  
+--------------+------
+ 701148208.72 | 0.00
+(1 row)
+
+--验证环境：701148208.72;0.00 
+--二级支行：
+--汇总总账表：生产第四批次数据，验证第五批次数据不一致 
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum 
+where statst_Dt ='20131231' and item_no = '1001' and org_no not like '019%' and ccy_cd not in ('R01','U01','T01','Z01');
+     sum      | sum  
+--------------+------
+ 701157708.72 | 0.00
+(1 row)
+
+--生产：701157708.72
+select sum(day_deb_bal),sum(day_crd_bal) from adsdata.c05_ccycom_item_day_sum_bak
+where statst_Dt ='20131231' and item_no = '1001' and org_no not like '019%' and ccy_cd not in ('R01','U01','T01','Z01');
+     sum      | sum  
+--------------+------
+ 701148208.72 | 0.00
+(1 row)
+
+--验证环境：701148208.72

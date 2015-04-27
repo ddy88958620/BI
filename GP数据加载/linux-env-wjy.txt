@@ -1,0 +1,125 @@
+#这个变量会决定调度工具所安装的根目录路径. 当此变量未指定时默认值 /ETL
+AUTO_HOME=$HOME/etl; export AUTO_HOME;
+#这个变量会决定用来连接至调度工具的Repository 所在的DB服务器联机设定(ODBC)
+AUTO_DSN=gpodbc; export AUTO_DSN;
+#这个变量会决定用来连接的调度工具的 Repository 名称, 当此变量未指定时, 内定值为 ETL(GP schema).
+AUTO_DB=petl; export AUTO_DB;
+#要处理的目标数据库(GP schema)
+AUTO_DATADB=sdsdata; export AUTO_DATADB
+#这个变量是用来指定此部执行调度程序机制的服务器名称. 在调度程序机制中可同时支持多部 Automation 服务器. 但是每一部服务器必须指定一个唯一的服务器名称.
+AUTO_SERVER=ETL1; export AUTO_SERVER;
+#这个变量是用来指定此部执行调度程序机制服务器的网络地址 (IP Address). 此网络地址会用来决定 etlagent.pl 用来开启服务的地址.
+AUTO_SERVER_IP=192.168.56.121; export AUTO_SERVER_IP;
+#这个变量会决定 etlagent.pl 用来监听 (listen) 的 TCP 网络端口号 (Port Number), 默认为 6346.
+AUTO_AGENT_PORT=6346; export AUTO_AGENT_PORT;
+#这个变量会决定当所收取到的数据文件的数据日期与作业所定义的周期或数据日历不符合时, 用来存放文件的目录路径. 
+AUTO_DATA_BYPASS=$AUTO_HOME/DATA/fail/bypass; export AUTO_DATA_BYPASS
+#这个变量会决定当作业成功执行完毕之后, 用来存放文件的目录路径.
+AUTO_DATA_COMPLETE=$AUTO_HOME/DATA/complete; export AUTO_DATA_COMPLETE
+#这个变量会决定当所收取到的数据文件的大小与控制文件中所标记的数据文件大小不符合时, 用来存放文件的目录路径.
+AUTO_DATA_CORRUPT=$AUTO_HOME/DATA/fail/corrupt; export AUTO_DATA_CORRUPT
+#这个变量会决定当所收取到的数据文件重复时, 用来存放重复文件的目录路径. 
+AUTO_DATA_DUPLICATE=$AUTO_HOME/DATA/fail/duplicate; export AUTO_DATA_DUPLICATE
+#这个变量会决定当作业执行产生错误之后, 用来存放文件的目录路径.
+AUTO_DATA_ERROR=$AUTO_HOME/DATA/fail/error; export AUTO_DATA_ERROR
+#这个变量会决定当作业在执行中用来存放文件的目录路径. 
+AUTO_DATA_PROCESS=$AUTO_HOME/DATA/process; export AUTO_DATA_PROCESS
+#这个变量会决定当作业在等待执行之前用来存放档案的目录路径. 
+AUTO_DATA_QUEUE=$AUTO_HOME/DATA/queue; export AUTO_DATA_QUEUE
+#这个变量会决定用来存放从数据来源端所传送来的文件的目录路径. 
+AUTO_DATA_RECEIVE=$AUTO_HOME/DATA/receive; export AUTO_DATA_RECEIVE
+#这个变量会决定当所收取到的控制文件未定义时, 用来存放数据文件的目录路径.
+AUTO_DATA_UNKNOWN=$AUTO_HOME/DATA/fail/unknown; export AUTO_DATA_UNKNOWN
+#这个变量会决定在此服务器上可以同时执行的作业数目. 默认值为 5
+AUTO_JOB_COUNT=5; export AUTO_JOB_COUNT
+#这个变量会决定在此服务器上要保留的调度程序的执行记录文件的天数.当此变量未指定时, 默认值 30
+AUTO_KEEP_PERIOD=30; export AUTO_KEEP_PERIOD
+#这个变量会决定在此服务器上所接收的控制文件名称的格式. 有效的设定值是 0, 1, 2.
+#当设定值是0时, 控制文件名称的格式为 “dir.<source>YYYYMMDD”. 控制文件的文件名必须以 “dir.” 为开头. 接着是所谓的作业来源 (Job Source), 作业来源的最大长度为30个字符. 接着是数据日期 (Data Date), 格式为 “YYYYMMDD”.
+#当默认值是1时, 控制文件名称的格式为 “D<source>MMDD”. 控制文件的档名必须以 “D” 为开头. 接着是所谓的作业来源 (Job Source), 作业来源的长度固定为5个字符. 接着是数据日期 (Data Date), 格式为 “MMDD”
+#当默认值是2时, 控制文件名称的格式为 “dir.<source>.YYYYMMDD” 或 “DIR.<source>.YYYYMMDD”. 控制文件的档名必须以 “dir.” 或 “DIR.” 为开头. 接着是所谓的作业源 (Job Source), 作业来源的最大长度为30个字符. 接着是数据日期 (Data Date), 格式为 “YYYYMMDD”.
+AUTO_NAME=0; export AUTO_NAME
+#这个变量是用来指定 Perl 的安装目录, 此变量没有默认值,UNIX下不须指定,WIN下要指定
+#AUTO_PERL=D:\work\perl
+#这个变量是用来指定此服务器是否为主要服务器(Primary Server). 在调度程序机制中可以同时存在多部Automation服务器, 但只能有一部服务器被设定成主要服务器.
+#1为主要服务器，0或不设定时为次要服务器
+AUTO_PRIMARY_SERVER=1; export AUTO_PRIMARY_SERVER
+#当此服务器不为主要服务器时, 必须设定此环境变量. 用来让 etlwdog.pl 知道主要服务器的地址, 以便能够定时发送存活封包 (heartbeat packet)来通知主要服务器.
+AUTO_PRI_SERVER_IP=192.168.56.121; export AUTO_PRI_SERVER_IP
+#当此服务器不为主要服务器时, 必须设定此环境变量. 此变量是用来设定在主要服务器上的 etlwdog.pl 所监听的 UDP 端口号 (Port Number), 内定是6346.
+AUTO_PRI_SERVER_PORT=6346; export AUTO_PRI_SERVER_PORT
+AUTO_PRIMARY_SERVER_PORT=6346; export AUTO_ PRIMARY_SERVER_PORT;
+#这个变量是当发送讯息通知时, 用来指定发送电子邮件的发件者地址. 此变量必须设定成电子邮件地址的格式.
+#AUTO_SENDER=etl@localhost; export AUTO_SENDER
+#这个变量是用来指定此部执行调试程序机制服务器的网络地址 (IP Address). 此网络地址会用来决定 etlagent.pl 用来开启服务的地址.默认值60秒
+AUTO_SLEEP=60; export AUTO_SLEEP
+#这个变量是当发送消息通知时, 用来指定发送电子邮件的邮件服务器名称 (Mail Server). 此变量必须设定成网络地址的格式.
+#AUTO_SMTP_SERVER=localhost; export AUTO_SMTP_SERVER
+#这个变量会决定 etlwdog.pl 用来监听 (listen) 的 UDP 网络端口号 (Port Number), 内定为 6346.
+AUTO_WDOG_PORT=6346; export AUTO_WDOG_PORT;
+
+export PS1=`uname`:'$PWD>'
+TMPDIR=$AUTO_HOME/tmp; export TMPDIR
+
+
+
+
+###create schema petl authorization etluser;
+###grant usage on schema petl to arcuser,mntrole with grant option;
+
+
+[etl@smdw ~]$ cat odbc_tst.pl 
+#!/usr/bin/perl
+use strict;
+use DBI;
+use DBD::ODBC;
+#建立数据库连接
+print "visit----\n";
+my $dbh = DBI->connect("dbi:ODBC:Greenplum","gpadmin","gpadmin",{AutoCommit=>1,PrintError=>0,RaiseError=>0})|| die "Error : $DBI::errstr\n";
+#建立会话
+my $sth = $dbh->prepare("select * from etl_job") || die "Error : $DBI::errstr\n";
+#执行SQL语句
+$sth->execute() || die "Error : $DBI::errstr\n";
+my @row;
+#$sth->fetchrow() : 返回结果
+while(@row = $sth->fetchrow())
+{
+     print "@row\n";
+}
+$sth->finish;
+#关闭数据库连接
+$dbh->disconnect();
+
+
+
+
+[etl@smdw ~]$ cat odbc_gp.pl  
+#!/usr/bin/perl
+use strict;
+use DBI;
+use DBD::ODBC;
+#建立数据库连接
+print "visit----\n";
+my $dbh = DBI->connect("dbi:ODBC:Greenplum","gpadmin","gpadmin",{AutoCommit=>1,PrintError=>0,RaiseError=>0})|| die "Error : $DBI::errstr\n";
+#建立会话
+
+sub testsql{
+my $sth = $dbh->prepare("SELECT Job_Priority FROM ETL_Job a,etl_job_source b WHERE a.ETL_System = b.ETL_System AND a.ETL_Job = b.ETL_Job and a.ETL_System = 'TST' AND b.Conv_File_Head ='TST_JOB1';") || die "Error : $DBI::errstr\n";
+#my $sth = $dbh->prepare("select 12345678;");
+#执行SQL语句
+$sth->execute() || die "Error : $DBI::errstr\n";
+my @row;
+#$sth->fetchrow() : 返回结果
+while(@row = $sth->fetchrow())
+{
+     print "@row\n";
+}
+$sth->finish;
+}
+#关闭数据库连接
+
+testsql();
+
+testsql();
+$dbh->disconnect();
+

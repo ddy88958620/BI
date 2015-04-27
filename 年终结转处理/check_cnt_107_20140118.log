@@ -1,0 +1,90 @@
+select count(*) from sdsdata.s01_glssubdyntmp11231        ;
+ count  
+--------
+ 347357
+(1 row)
+
+select count(*) from sdsdata.s01_glssubdyntmp21231        ;
+ count  
+--------xxxx
+ 694706
+(1 row)
+
+select count(*) from sdsdata.S01_GLSSUBDYN1231            ;
+ count  
+--------xxxx
+ 346932
+(1 row)
+
+select count(*) from sdsdata.S01_PUBFXRATE1231            ;
+ count 
+-------
+ 61456
+(1 row)
+
+select count(*) from sdsdata.S01_PUBBRANCHINFO1231        ;
+ count 
+-------
+   277
+(1 row)
+
+select count(*) from sdsdata.S01_DPSFOREBRC1231           ;
+ count 
+-------
+   256
+(1 row)
+
+select count(*) from sdsdata.S01_MBFEBRCINFO1231          ;
+ count 
+-------
+   256
+(1 row)
+
+select count(*) from bdsdata.T00_EXCH_RATE                ;
+ count 
+-------xxxx
+ 65776
+(1 row)
+
+select count(*) from bdsdata.T04_INTER_ORG_HIS            ;
+ count 
+-------
+  1484
+(1 row)
+
+select count(*) from bdsdata.T09_GL_ITEM_DYNAM_HIS_1230   ;
+  count  
+---------
+ 4802101
+(1 row)
+
+select count(*) from adsdata.C05_FIRST_ITEM_DAY_SUM_1230  ;
+  count  
+---------
+ 3262526
+(1 row)
+
+select count(*) from adsdata.C05_LAST_ITEM_DAY_SUM_1230   ;
+  count   
+----------
+ 40944361
+(1 row)
+
+select count(*) from adsdata.C05_CCYCOM_ITEM_DAY_SUM_1230 ;
+   count   
+-----------
+ 163147769
+(1 row)
+
+select count(*) from adsdata.C08_INTER_ORG                ;
+ count 
+-------xxxx
+ 24600
+(1 row)
+
+select count(*) from adsdata.C08_INTER_ORG_RELA           ;
+ count 
+-------xxxx
+ 27845
+(1 row)
+

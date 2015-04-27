@@ -1,0 +1,79 @@
+
+【在虚拟机上实验数据导入导出】
+ 在"GP数据操作范例.txt"的基础设施（实体表、外部表、funcation）建立好后，我们可以将其中的各个动作串起来跑
+ 黄春宝编写-20130110 
+
+ 使用bonc用户新建shell代码 my_gp_action.sh
+【代码开始】
+
+#! /bin/bash
+#加载GREENPLU工具路径到当前用户环境
+source /data/greenplum-db/greenplum_path.sh
+#加载连接GP的环境变量
+export PGHOST="192.168.191.190"
+export PGPORT="5432"
+export PGDATABASE="bi_ods_all"
+export PGUSER="dyj"
+export PGPASSWORD="dyj"
+
+#--------------------------------------------------------------
+#动作1：检查8082端口上的GPFDIST服务是否已经存在，不存在则启动之
+v_gpfdist_if_exists=`ps -ef|grep gpfdist|grep 8082|wc -l`
+if [ $v_gpfdist_if_exists -gt 0 ]
+then 
+	echo "GPFDIST-8082-IS-EXISTS"
+else 
+	nohup gpfdist -d /data/etl_data -p 8082 -l /home/bonc/gpfdist_8082.log&
+	v_time_id=`date +%Y%m%d%H%M%S`
+	echo ${v_time_id}"-GPFDIST-8082-START-UP-NOW"
+fi
+
+
+#--------------------------------------------------------------
+#动作2：装载入库
+psql -c "select stage.p_ts_mytest();"
+
+
+#--------------------------------------------------------------
+#动作3：数据从stage层加工到ods层
+psql -c "select ods.p_ods_d_mytest('20120318');"
+
+
+#--------------------------------------------------------------
+#动作4：将数据从ods层导出为文本文件（注意这个动作后的文件行数的变化）
+psql -c "insert into ods.ods_d_mytest_w_external(month_id,day_id,caa,cbb,ccc,cdd) select month_id,day_id,caa,cbb,ccc,cdd from ods.ods_d_mytest where month_id='201203' and day_id='18';"
+
+
+#--------------------------------------------------------------
+#动作5：文本文件简单加工
+sh /home/bonc/my_dofile.sh TDBODDWAL02001 ods.ods_d_mytest
+
+
+#OK,SHELL代码完成
+【代码结束】
+
+
+
+
+
+
+
+给shell脚本赋予执行权限: chmod +x my_gp_action.sh
+执行shell脚本: ./my_gp_action.sh
+
+好了可以在目录 /home/gpadmin/_hcb下看到生成了文本的数据文件my_data.txt （字段默认是以TAB为分隔符）
+查看数据文件: cat my_data.txt
+
+
+
+
+
+(用那个用户查看？？？？)
+#附：查看function的代码：
+select prosrc
+  from pg_proc a, pg_namespace b
+ where pronamespace = b.oid
+   and b.nspname = 'ods' 
+   and proname = 'p_ods_d_mytest';
+
+
