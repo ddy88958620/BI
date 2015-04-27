@@ -34,3 +34,5 @@ goto end
 ::ÍË³ö³ÌÐò 
 cd "%pwd%" 
 pause
+
+rem  for /r . %i in (.svn) do rd /s /q %i 
